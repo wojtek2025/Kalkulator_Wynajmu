@@ -431,25 +431,68 @@ function updateHolidaysTextarea() {
     document.getElementById('holidaysInput').value = text.trim();
 }
 
+
+
 function saveHolidaysFromText() {
     let lines = document.getElementById('holidaysInput').value.split('\n');
     let newCustom = {};
+    
     lines.forEach(line => {
         line = line.trim();
         if (line.startsWith('#') || line === '') return;
-        let parts = line.split(':');
-        if (parts.length >= 2) {
-            let date = parts[0].trim();
-            let name = parts.slice(1).join(':').trim();
-            if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-                newCustom[date] = name;
+        
+        // Znajdujemy separator (dwukropek lub w ostateczności pierwsza spacja)
+        let separatorIdx = line.indexOf(':');
+        if (separatorIdx === -1) {
+            separatorIdx = line.search(/\s/);
+        }
+        
+        if (separatorIdx !== -1) {
+            let datePart = line.substring(0, separatorIdx).trim();
+            let namePart = line.substring(separatorIdx + 1).trim();
+            
+            // Tolerancja dla formatów takich jak 2026-9-1 (brak zer)
+            if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(datePart)) {
+                let [y, m, d] = datePart.split('-');
+                let formattedDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                
+                // Usunięcie ewentualnego dwukropka na początku nazwy
+                namePart = namePart.replace(/^:\s*/, '');
+                newCustom[formattedDate] = namePart || "Dzień wolny";
             }
+        } else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(line)) {
+            // Jeśli użytkownik wpisał samą datę bez żadnej nazwy
+            let [y, m, d] = line.split('-');
+            let formattedDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            newCustom[formattedDate] = "Dzień wolny";
         }
     });
+
     customHolidays = newCustom;
     localStorage.setItem('school_rental_custom_holidays', JSON.stringify(customHolidays));
+
+    // Jeśli nowy dzień wolny nałożył się na wcześniej przypisane godziny - wykasuj je
+    let removedCount = 0;
+    Object.keys(assignedData).forEach(dateStr => {
+        let parts = dateStr.split('-');
+        let mmdd = `${parts[1]}-${parts[2]}`;
+        if (checkIsHoliday(dateStr, mmdd) !== null) {
+            delete assignedData[dateStr];
+            removedCount++;
+        }
+    });
+    
+    // Zapisz wyczyszczone dni w pamięci i odśwież widok
+    if (removedCount > 0) saveAssignedData();
+    
+    updateHolidaysTextarea(); // Odświeża okno tekstowe do idealnego formatu z zerami
     renderCalendar();
-    alert("Pomyślnie zaktualizowano kalendarz dni wolnych!");
+    
+    let msg = "Pomyślnie zaktualizowano kalendarz dni wolnych!";
+    if (removedCount > 0) {
+        msg += `\nUwaga: Usunięto wcześniej przypisane godziny z ${removedCount} dni, które stały się wolne.`;
+    }
+    alert(msg);
 }
 
 const today = new Date();
