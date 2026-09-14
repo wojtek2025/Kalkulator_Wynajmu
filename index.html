@@ -18,6 +18,7 @@
             <button class="tab-btn" onclick="switchTab('batch', this)">⚡ Szybkie przypisanie</button>
             <button class="tab-btn" onclick="switchTab('rateCalc', this)">🧮 Wylicz Stawkę</button>
             <button class="tab-btn" onclick="switchTab('config', this)">⚙️ Konfiguracja Umowy</button>
+            <button class="tab-btn" onclick="switchTab('report', this); refreshReportView();">📄 Raport i Wydruk</button>
         </div>
 
         <!-- Zakładka 1: Kalkulator i Harmonogram -->
@@ -94,7 +95,7 @@
                     </div>
 
                     <div>
-                        <button onclick="generatePDFReport()" style="background: #17a2b8; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px; font-size: 15px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(23,162,184,0.3);">📄 Drukuj / Eksportuj do PDF</button>
+                        <button onclick="switchTab('report', document.querySelectorAll('.tab-btn')[4]); refreshReportView();" style="background: #17a2b8; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px; font-size: 15px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(23,162,184,0.3);">📄 Zobacz Raport i Drukuj</button>
                         <button class="clear-all-btn" onclick="clearEntireCalendar()">🗑️ Resetuj cały kalkulator</button>
                     </div>
                 </div>
@@ -119,7 +120,7 @@
                 <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid var(--primary); padding-bottom: 12px; font-size: 22px;">🧮 Kalkulator stawki (Zarządzenie m.st. Warszawy)</h3>
                 <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 25px; line-height: 1.5;">Wprowadź planowany okres umowy. Jeśli okres wyniesie co najmniej 3 miesiące, wskaźnik W2 zaznaczy się automatycznie (z możliwością odznaczenia).</p>
                 
-                <!-- SEKCJA 0: OKRES UMOWY W KALKULATORZE -->
+                <!-- SEKCJA OKRESU UMOWY -->
                 <div style="background: #eef6ff; border: 1px solid #b8daff; padding: 18px; border-radius: 10px; margin-bottom: 20px;">
                     <h4 style="margin: 0 0 12px 0; font-size: 15px; color: var(--primary); text-transform: uppercase;">📅 Okres obowiązywania umowy:</h4>
                     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -240,14 +241,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- Zakładka 5: Podgląd Raportu i Druk -->
+        <div id="reportTab" class="tab-content">
+            <div style="max-width: 950px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #e9ecef;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="margin: 0; color: #2c3e50; font-size: 22px;">📄 Raport Finansowy i Harmonogram</h3>
+                    <button onclick="window.print()" class="save-btn" style="width: auto; background: #17a2b8; padding: 10px 22px; font-size: 15px; box-shadow: 0 2px 5px rgba(23,162,184,0.3);">🖨️ Drukuj / Pobierz PDF</button>
+                </div>
+                <!-- Kontener, w który JS wstrzykuje raport -->
+                <div id="reportDisplayArea"></div>
+            </div>
+        </div>
+
     </div>
 
     <div class="footer">
-        Stworzone przez: <strong>Agnieszka Przekopska-Gaus</strong>
+        Stworzone przez: <strong>Agnieszka Przekopska-Gaus</strong>[cite: 4]
     </div>
 </div>
-
-<div id="reportPrintArea" class="print-only"></div>
 
 <script src="app.js"></script>
 </body>

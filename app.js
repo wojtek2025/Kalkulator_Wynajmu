@@ -146,6 +146,7 @@ function onContractDatesChange(source) {
         }
     }
 
+    saveConfiguration();
     updateSuggestedRate();
     renderCalendar();
 }
@@ -290,9 +291,24 @@ function initBatchPreviews() {
     }
 }
 
+// Zapis godzin w kalendarzu do pamięci podręcznej
+function saveAssignedData() {
+    localStorage.setItem('school_rental_assigned_data', JSON.stringify(assignedData));
+}
+
 function loadConfiguration() {
     initRateCalculatorSelects();
     initGlobalIndicators();
+
+    // Wczytanie zapisanych wcześniej godzin
+    let savedHours = localStorage.getItem('school_rental_assigned_data');
+    if (savedHours) {
+        try {
+            assignedData = JSON.parse(savedHours);
+        } catch (e) {
+            assignedData = {};
+        }
+    }
 
     let savedConfig = localStorage.getItem('school_rental_config');
     if (savedConfig) {
@@ -472,7 +488,7 @@ function applyBatchAssignment() {
     let endContract = document.getElementById('contractEnd').value;
 
     if (!startContract || !endContract) {
-        alert("Aby użyć przypisywania cyklicznego, musisz ustawić zakres umowy w zakładce Konfiguracja i ZAPISAĆ!");
+        alert("Aby użyć przypisywania cyklicznego, musisz ustawić zakres umowy w zakładce Konfiguracja lub Wylicz Stawkę!");
         switchTab('config', document.querySelectorAll('.tab-btn')[3]);
         return;
     }
@@ -522,6 +538,7 @@ function applyBatchAssignment() {
         curr.setDate(curr.getDate() + 1);
     }
 
+    saveAssignedData();
     alert(`Zaktualizowano przypisania! Uzupełniono harmonogram dla ${countAssigned} dni w podanym okresie.`);
     switchTab('calc', document.querySelectorAll('.tab-btn')[0]);
     renderCalendar();
@@ -643,6 +660,7 @@ function assignHours() {
     });
 
     selectedDays.clear();
+    saveAssignedData();
     renderCalendar();
 }
 
@@ -651,6 +669,7 @@ function clearAssignedHours() {
         delete assignedData[dateStr];
     });
     selectedDays.clear();
+    saveAssignedData();
     renderCalendar();
 }
 
@@ -659,6 +678,7 @@ function clearEntireCalendar() {
         assignedData = {};
         selectedDays.clear();
         localStorage.removeItem('school_rental_config');
+        localStorage.removeItem('school_rental_assigned_data');
 
         document.getElementById('contractStart').value = "";
         document.getElementById('calcContractStart').value = "";
@@ -852,7 +872,8 @@ function updateSummaryTable() {
     }
 }
 
-function generatePDFReport() {
+// Renderowanie zawartości wewnątrz zakładki Raport
+function refreshReportView() {
     let conf = getActiveRateConfig();
     let startContract = document.getElementById('contractStart').value || "Nie określono";
     let endContract = document.getElementById('contractEnd').value || "Nie określono";
@@ -885,8 +906,15 @@ function generatePDFReport() {
     }
 
     let sortedKeys = Object.keys(monthsMap).sort();
+    let reportArea = document.getElementById('reportDisplayArea');
+
     if (sortedKeys.length === 0) {
-        alert("Brak wprowadzonych godzin wynajmu. Przypisz godziny w kalendarzu, aby wygenerować raport.");
+        reportArea.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #6c757d;">
+                <h3>Brak danych do raportu</h3>
+                <p>Wprowadź godziny wynajmu w kalendarzu lub użyj szybkiego przypisania, aby zobaczyć wyliczenia.</p>
+            </div>
+        `;
         return;
     }
 
@@ -958,10 +986,10 @@ function generatePDFReport() {
 
             if (isHoliday) {
                 cellClass += " holiday";
-                content += `<span style="font-size:6pt;">Święto</span>`;
+                content += `<span style="font-size:7pt;">Święto</span>`;
             } else if (val > 0) {
                 cellClass += " active";
-                content += `<span style="font-size:7pt; color:#1e7e34;">${val}h</span>`;
+                content += `<span style="font-size:8pt; color:#1e7e34;">${val}h</span>`;
             }
 
             cellsHtml += `<div class="${cellClass}">${content}</div>`;
@@ -981,28 +1009,28 @@ function generatePDFReport() {
         `;
     });
 
-    let reportHtml = `
-        <div class="report-header">
-            <h2 style="margin:0 0 5px 0; font-size:18pt;">Raport Rozliczenia Wynajmu Sal</h2>
-            <div style="font-size:10pt; color:#555;">Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</div>
+    reportArea.innerHTML = `
+        <div class="report-header-box">
+            <h2 style="margin:0 0 6px 0; font-size:20px;">Rozliczenie Wynajmu Sal</h2>
+            <div style="font-size:12px; color:#6c757d;">Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</div>
         </div>
 
         <div class="report-meta-grid">
             <div class="report-meta-box">
                 <b>Okres obowiązywania umowy:</b><br>
                 Od: <b>${startContract}</b> do: <b>${endContract}</b><br><br>
-                <b>Łączny czas wynajmu:</b> ${totalDaysAll} dni / <b>${totalHoursGlobalDecimal}h</b>
+                <b>Łączny czas:</b> ${totalDaysAll} dni / <b>${totalHoursGlobalDecimal}h</b>
             </div>
             <div class="report-meta-box">
                 <b>Stawka godzinowa bazowa:</b><br>
                 Netto: <b>${formatCurrency(netto1h)}/h</b> | VAT (${vat}%): <b>${formatCurrency(vat1h)}/h</b><br>
-                Brutto: <b style="font-size:11pt;">${formatCurrency(brutto1h)}/h</b><br><br>
-                Średnia miesięczna: <b>${formatCurrency(avgBrutto)} brutto</b>
-                ${avgBrutto > 2500 ? '<br><span style="color:red; font-weight:bold;">(Wymagana opłata kaucyjna / zabezpieczenie)</span>' : ''}
+                Brutto: <b style="color:var(--success);">${formatCurrency(brutto1h)}/h</b><br><br>
+                Średnia miesięcznie: <b>${formatCurrency(avgBrutto)} brutto</b>
+                ${avgBrutto > 2500 ? '<br><span style="color:red; font-weight:bold;">(Wymagane zabezpieczenie / kaucja)</span>' : ''}
             </div>
         </div>
 
-        <h3 style="font-size:13pt; margin: 20px 0 10px 0;">Zestawienie Finansowe Miesięczne</h3>
+        <h4 style="margin: 25px 0 10px 0; color:#2c3e50; text-transform: uppercase; font-size: 14px;">Zestawienie Finansowe Miesięczne:</h4>
         <table class="report-table">
             <thead>
                 <tr>
@@ -1022,21 +1050,18 @@ function generatePDFReport() {
                     <td>${totalHoursGlobalDecimal}h</td>
                     <td>${formatCurrency(globalNettoSum)}</td>
                     <td>${formatCurrency(globalVatSum)}</td>
-                    <td>${formatCurrency(globalBruttoSum)}</td>
+                    <td><b>${formatCurrency(globalBruttoSum)}</b></td>
                 </tr>
             </tbody>
         </table>
 
         <div class="page-break"></div>
 
-        <h3 style="font-size:13pt; margin: 20px 0 10px 0;">Szczegółowy Harmonogram Dni i Godzin Wynajmu</h3>
+        <h4 style="margin: 25px 0 10px 0; color:#2c3e50; text-transform: uppercase; font-size: 14px;">Harmonogram Wynajmu (Dni i Godziny):</h4>
         <div class="calendar-print-grid">
             ${miniCalendarsHtml}
         </div>
     `;
-
-    document.getElementById('reportPrintArea').innerHTML = reportHtml;
-    window.print();
 }
 
 window.onload = async function() {
@@ -1051,7 +1076,6 @@ window.onload = async function() {
     } catch (error) {
         console.warn("Nie udało się pobrać pliku cennik.json przez fetch.", error);
     }
-
     
     initBatchRows(); 
     loadConfiguration();
