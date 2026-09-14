@@ -1061,7 +1061,7 @@ function refreshReportView() {
 
             if (isHoliday) {
                 cellClass += " holiday";
-                content += `<span style="font-size:7pt;">Święto</span>`;
+                content += `<span style="font-size:7pt;">Wolne</span>`;
             } else if (val > 0) {
                 cellClass += " active";
                 content += `<span style="font-size:8pt; color:#1e7e34;">${val}h</span>`;
