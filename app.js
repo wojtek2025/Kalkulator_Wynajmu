@@ -1063,7 +1063,12 @@ function refreshReportView() {
         </div>
     `;
 }
-
+function triggerPrintWithRefresh() {
+    refreshReportView();
+    setTimeout(() => {
+        window.print();
+    }, 150);
+}
 window.onload = async function() {
     try {
         const response = await fetch('cennik.json');
