@@ -4,7 +4,7 @@
     "Ochota": 1.0, "Praga-Południe": 1.0, "Praga-Północ": 1.0, "Rembertów": 0.8,
     "Śródmieście": 1.2, "Targówek": 0.8, "Ursus": 1.0, "Ursynów": 1.0,
     "Wawer": 0.8, "Wesoła": 0.8, "Wilanów": 1.0, "Włochy": 0.8,
-    "Wola": 1.0, "Żoliborz": 1.9
+    "Wola": 1.0, "Żoliborz": 1.2
   },
   "bsn2Data": [
     { "name": "1. Sala lekcyjna / biblioteka / świetlica (>35m²)", "bsn2": 47, "w": {"1":1.3, "2":0.9, "3":0.3, "4":0.8, "6":0.5, "7":0.2, "8":0.8} },
