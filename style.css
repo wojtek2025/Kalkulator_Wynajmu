@@ -526,7 +526,7 @@ input[type="checkbox"] {
 /* --- NIEZAWODNE REGUŁY WYDRUKU DO PDF --- */
 @media print {
     @page {
-        size: A4 portrait;
+        
         margin: 10mm;
     }
 
