@@ -308,7 +308,7 @@ function saveConfiguration() {
 }
 
 function updateHolidaysTextarea() {
-    let text = "# --- Święta stałe (bez roku z cennik.json) ---\n";
+    let text = "# --- Święta stałe ---\n";
     for (let md in fixedHolidays) {
         text += `${md} : ${fixedHolidays[md]}\n`;
     }
