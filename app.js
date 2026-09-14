@@ -2,16 +2,10 @@ let assignedData = {};
 let selectedDays = new Set();
 let activeRateType = 'brutto';
 
-// Zmienne przygotowane do przyjęcia danych z pliku JSON
 let bsn2Data = [];
 let districtsW0 = {};
-
-let fixedHolidays = {
-    "01-01": "Nowy Rok", "01-06": "Trzech Króli", "05-01": "Święto Pracy", "05-03": "Święto Konstytucji 3 Maja",
-    "08-15": "Wniebowzięcie NMP", "11-01": "Wszystkich Świętych", "11-11": "Święto Niepodległości",
-    "12-25": "Boże Narodzenie", "12-26": "Drugi dzień świąt"
-};
-
+let fixedHolidays = {};
+let wFactors = {};
 let customHolidays = {};
 
 function initBatchRows() {
@@ -36,6 +30,18 @@ function initBatchRows() {
     container.innerHTML = html;
 }
 
+function initGlobalIndicators() {
+    for (let i = 2; i <= 8; i++) {
+        let chk = document.getElementById(`chk_glob_W${i}`);
+        if (chk && chk.parentElement && wFactors[i]) {
+            chk.parentElement.innerHTML = `
+                <input type="checkbox" id="chk_glob_W${i}" onchange="updateSuggestedRate()"> 
+                ${wFactors[i].name} <span class="badge" style="background:#e9ecef; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:12px; margin-left:6px;">x${wFactors[i].val}</span>
+            `;
+        }
+    }
+}
+
 function initRateCalculatorSelects() {
     let distSelect = document.getElementById('calcDistrictSelect');
     distSelect.innerHTML = '';
@@ -46,14 +52,12 @@ function initRateCalculatorSelects() {
         distSelect.appendChild(opt);
     }
 
-    // Czyszczenie i dodanie pierwszego pomieszczenia
     document.getElementById('calcRoomsContainer').innerHTML = '';
     addRoomRow();
 }
 
 function addRoomRow() {
     let container = document.getElementById('calcRoomsContainer');
-    let rowId = 'room_' + Date.now();
     let row = document.createElement('div');
     row.className = 'room-calc-row';
     
@@ -94,68 +98,67 @@ function validateNonNegative(input) {
     }
 }
 
-// Wyliczanie zsumowanej stawki OpG dla wszystkich pomieszczeń
 function updateSuggestedRate() {
-    let w0 = parseFloat(document.getElementById('calcDistrictSelect').value) || 1.0;
+    let distEl = document.getElementById('calcDistrictSelect');
+    let w0 = distEl ? (parseFloat(distEl.value) || 1.0) : 1.0;
     
-    // Stan globalnych wskaźników
-    let globalActive = {
-        2: document.getElementById('chk_glob_W2').checked,
-        3: document.getElementById('chk_glob_W3').checked,
-        4: document.getElementById('chk_glob_W4').checked,
-        5: document.getElementById('chk_glob_W5').checked,
-        6: document.getElementById('chk_glob_W6').checked,
-        7: document.getElementById('chk_glob_W7').checked,
-        8: document.getElementById('chk_glob_W8').checked
-    };
+    let globalActive = {};
+    for (let i = 2; i <= 8; i++) {
+        let el = document.getElementById(`chk_glob_W${i}`);
+        globalActive[i] = el ? el.checked : false;
+    }
 
     let totalOpG = 0;
 
-    // Przeliczanie każdego pokoju indywidualnie
     document.querySelectorAll('.room-calc-row').forEach(row => {
-        let itemIdx = parseInt(row.querySelector('.item-select').value);
-        let bsn2 = bsn2Data[itemIdx].bsn2;
-        let allowedWs = bsn2Data[itemIdx].w; // np. {1:1.3, 2:0.9...}
+        let selectEl = row.querySelector('.item-select');
+        if (!selectEl || isNaN(parseInt(selectEl.value))) return;
+        
+        let itemIdx = parseInt(selectEl.value);
+        let item = bsn2Data[itemIdx];
+        if (!item) return;
+
+        let bsn2 = item.bsn2;
+        let allowedWs = item.w || []; // Teraz to prosta tablica: [1, 2, 3...]
         
         let w1Chk = row.querySelector('.chk-w1');
         let w1Wrap = row.querySelector('.w1-wrap');
         
-        // Obsługa interfejsu W1 (aktywny / nieaktywny w zależności od sali)
-        if (allowedWs[1] !== undefined) {
+        // Sprawdzenie czy W1 jest dozwolony dla tej sali
+        if (allowedWs.includes(1)) {
             w1Wrap.classList.remove('disabled');
             w1Chk.disabled = false;
         } else {
             w1Wrap.classList.add('disabled');
             w1Chk.disabled = true;
-            w1Chk.checked = false; // reset
+            w1Chk.checked = false;
         }
 
-        // Podstawa z uwzględnieniem dzielnicy
         let opg = bsn2 * w0;
         
-        // W1 (jeśli zaznaczony i dozwolony)
-        if (w1Chk.checked) {
-            opg *= allowedWs[1]; // x1.3
+        // Mnożnik W1 (z wFactors)
+        if (w1Chk.checked && wFactors[1]) {
+            opg *= wFactors[1].val;
         }
         
-        // Wskaźniki globalne (tylko te, które są dozwolone dla tej konkretnej sali)
+        // Mnożniki globalne W2-W8 (z wFactors, jeśli zaznaczone i dozwolone dla sali)
         for (let i = 2; i <= 8; i++) {
-            if (globalActive[i] && allowedWs[i] !== undefined) {
-                opg *= allowedWs[i]; // Wartość brana prosto ze słownika (matrycy) dla danej sali!
+            if (globalActive[i] && allowedWs.includes(i) && wFactors[i]) {
+                opg *= wFactors[i].val;
             }
         }
         
-        // Aktualizacja UI wiersza
         row.querySelector('.room-opg').innerText = formatCurrency(opg) + ' / h';
         totalOpG += opg;
     });
     
-    // Sumaryczna wartość na dole
-    document.getElementById('displaySuggestedRate').innerText = formatCurrency(totalOpG) + " / h";
+    let dispEl = document.getElementById('displaySuggestedRate');
+    if (dispEl) {
+        dispEl.innerText = formatCurrency(totalOpG) + " / h";
+    }
 }
 
 function transferSuggestedRate() {
-    // Wywołujemy odświeżenie na wypadek niezapisanych stanów
     updateSuggestedRate();
     
     let totalStr = document.getElementById('displaySuggestedRate').innerText;
@@ -168,23 +171,25 @@ function transferSuggestedRate() {
     
     setTimeout(() => {
         let saveBtn = document.querySelector('#configTab .save-btn');
-        saveBtn.style.transform = 'scale(1.05)';
-        saveBtn.style.boxShadow = '0 0 15px rgba(40,167,69,0.8)';
-        setTimeout(() => {
-            saveBtn.style.transform = 'scale(1)';
-            saveBtn.style.boxShadow = '0 2px 4px rgba(40,167,69,0.3)';
-        }, 500);
+        if (saveBtn) {
+            saveBtn.style.transform = 'scale(1.05)';
+            saveBtn.style.boxShadow = '0 0 15px rgba(40,167,69,0.8)';
+            setTimeout(() => {
+                saveBtn.style.transform = 'scale(1)';
+                saveBtn.style.boxShadow = '0 2px 4px rgba(40,167,69,0.3)';
+            }, 500);
+        }
     }, 300);
 }
 
 function updateFromNetto() {
     activeRateType = 'netto';
-    let netto = parseFloat(document.getElementById('rateNetto').value);
-    if (isNaN(netto)) netto = 0;
+    let netto = parseFloat(document.getElementById('rateNetto').value) || 0;
     let vat = parseFloat(document.getElementById('vatRate').value) / 100;
     
-    let vatAmt = Math.round(netto * vat * 100) / 100;
-    let brutto = netto + vatAmt;
+    let rateGrosze = Math.round(netto * 100);
+    let vatAmt = Math.round((rateGrosze * vat)) / 100;
+    let brutto = (rateGrosze / 100) + vatAmt;
 
     document.getElementById('rateVatAmount').value = vatAmt.toFixed(2);
     document.getElementById('rateBrutto').value = brutto.toFixed(2);
@@ -192,12 +197,11 @@ function updateFromNetto() {
 
 function updateFromBrutto() {
     activeRateType = 'brutto';
-    let brutto = parseFloat(document.getElementById('rateBrutto').value);
-    if (isNaN(brutto)) brutto = 0;
+    let brutto = parseFloat(document.getElementById('rateBrutto').value) || 0;
     let vat = parseFloat(document.getElementById('vatRate').value) / 100;
     
     let netto = Math.round((brutto / (1 + vat)) * 100) / 100;
-    let vatAmt = brutto - netto;
+    let vatAmt = Math.round((brutto - netto) * 100) / 100;
 
     document.getElementById('rateVatAmount').value = vatAmt.toFixed(2);
     document.getElementById('rateNetto').value = netto.toFixed(2);
@@ -231,7 +235,8 @@ function initBatchPreviews() {
 }
 
 function loadConfiguration() {
-    initRateCalculatorSelects(); // ładuje też pierwszy pokój
+    initRateCalculatorSelects();
+    initGlobalIndicators();
 
     let savedConfig = localStorage.getItem('school_rental_config');
     if (savedConfig) {
@@ -303,7 +308,7 @@ function saveConfiguration() {
 }
 
 function updateHolidaysTextarea() {
-    let text = "# --- Święta stałe (bez roku) ---\n";
+    let text = "# --- Święta stałe (bez roku z cennik.json) ---\n";
     for (let md in fixedHolidays) {
         text += `${md} : ${fixedHolidays[md]}\n`;
     }
@@ -603,17 +608,14 @@ function clearEntireCalendar() {
             updateBatchPreview(i);
         }
 
-        // Reset Kalkulatora Stawek
         document.getElementById('calcDistrictSelect').selectedIndex = 0;
         for(let i=2; i<=8; i++) {
             let globChk = document.getElementById('chk_glob_W'+i);
             if (globChk) globChk.checked = false;
         }
         
-        // Reset pokoi do jednego
         document.getElementById('calcRoomsContainer').innerHTML = '';
         addRoomRow();
-        
         renderCalendar();
     }
 }
@@ -648,16 +650,13 @@ function calculateFinancials(totalHoursDecimal) {
     if (type === 'netto') {
         netto = (rateGrosze * totalHoursDecimal) / 100;
         netto = Math.round(netto * 100 + Number.EPSILON) / 100;
-        vat = netto * vatRate;
-        vat = Math.round(vat * 100 + Number.EPSILON) / 100;
+        vat = Math.round((netto * vatRate) * 100 + Number.EPSILON) / 100;
         brutto = netto + vat;
     } else {
         brutto = (rateGrosze * totalHoursDecimal) / 100;
         brutto = Math.round(brutto * 100 + Number.EPSILON) / 100;
-        netto = brutto / (1 + vatRate);
-        netto = Math.round(netto * 100 + Number.EPSILON) / 100;
-        vat = brutto - netto;
-        vat = Math.round(vat * 100 + Number.EPSILON) / 100;
+        netto = Math.round((brutto / (1 + vatRate)) * 100 + Number.EPSILON) / 100;
+        vat = Math.round((brutto - netto) * 100 + Number.EPSILON) / 100;
     }
 
     return { netto: netto, vat: vat, brutto: brutto };
@@ -783,21 +782,20 @@ function updateSummaryTable() {
     }
 }
 
-// Zmieniona metoda inicjalizacji przy starcie strony (wczytuje plik JSON)
 window.onload = async function() {
     try {
-        // Zwróć uwagę, by plik z cennikiem znajdował się w tym samym folderze!
         const response = await fetch('cennik.json');
         const data = await response.json();
         
-        bsn2Data = data.bsn2Data;
-        districtsW0 = data.districtsW0;
-        
-        initBatchRows(); 
-        loadConfiguration();
-        renderCalendar();
+        bsn2Data = data.bsn2Data || [];
+        districtsW0 = data.districtsW0 || {};
+        fixedHolidays = data.fixedHolidays || {};
+        wFactors = data.wFactors || {};
     } catch (error) {
-        console.error("Błąd podczas ładowania cennika:", error);
-        alert("Nie udało się załadować bazy stawek i słowników z pliku cennik.json. Upewnij się, że plik istnieje i aplikacja jest uruchomiona na serwerze (np. przez Netlify).");
+        console.warn("Nie udało się pobrać pliku cennik.json przez fetch.", error);
     }
+    
+    initBatchRows(); 
+    loadConfiguration();
+    renderCalendar();
 };

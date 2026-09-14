@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Agnieszka Przekopska-Gaus">
     <title>Kalkulator Wynajmu Sal – Warszawa</title>
-    <!-- Podłączenie pliku ze stylami CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,14 +20,12 @@
             <button class="tab-btn" onclick="switchTab('config', this)">⚙️ Konfiguracja Umowy</button>
         </div>
 
-        <!-- Zakładka 1: Kalkulator i Kalendarz -->
+        <!-- Zakładka 1: Kalkulator i Harmonogram -->
         <div id="calcTab" class="tab-content active">
             <div class="main-layout">
                 <div class="calendar-section">
                     <div class="main-rate-info">
-                        <div class="rate-details" id="displayRateInfo">
-                            <!-- JS Wstrzykuje stawki -->
-                        </div>
+                        <div class="rate-details" id="displayRateInfo"></div>
                         <button onclick="switchTab('config', document.querySelectorAll('.tab-btn')[3])">Edytuj stawkę</button>
                     </div>
 
@@ -42,7 +39,7 @@
 
                     <div class="controls">
                         <button onclick="changeMonth(-1)">&#10094;</button>
-                        <span id="monthYearLabel" style="min-width: 200px; text-align: center; color: var(--text-main);">Wrzesień 2026</span>
+                        <span id="monthYearLabel" style="min-width: 200px; text-align: center; color: var(--text-main);"></span>
                         <button onclick="changeMonth(1)">&#10095;</button>
                     </div>
 
@@ -109,9 +106,7 @@
                 <h3 style="margin-top: 0; color: var(--text-main); border-bottom: 2px solid var(--primary); padding-bottom: 8px;">⚡ Szybkie przypisanie cykliczne</h3>
                 <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">Funkcja automatycznie uzupełni godziny w podanym <strong>zakresie umowy</strong> dla wybranych dni tygodnia. Dni ustawowo wolne od pracy oraz święta zdefiniowane w konfiguracji zostaną automatycznie pominięte.</p>
                 
-                <!-- Pojemnik na generowane dynamicznie pola dni tygodnia -->
-                <div id="batchRowsContainer" style="background: var(--bg-body); border: 1px solid #ced4da; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
-                </div>
+                <div id="batchRowsContainer" style="background: var(--bg-body); border: 1px solid #ced4da; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;"></div>
 
                 <button onclick="applyBatchAssignment()" class="save-btn">Zastosuj cykliczne przypisanie</button>
             </div>
@@ -129,30 +124,24 @@
                     
                     <div class="config-group" style="margin-bottom: 15px;">
                         <label>📍 Dzielnica (W0):</label>
-                        <select id="calcDistrictSelect" style="border: 2px solid var(--primary); padding: 10px; font-weight: bold; color: var(--primary); background-color: #f1f8ff; max-width: 300px;" onchange="updateSuggestedRate()">
-                            <!-- Wypełniane przez JS -->
-                        </select>
+                        <select id="calcDistrictSelect" style="border: 2px solid var(--primary); padding: 10px; font-weight: bold; color: var(--primary); background-color: #f1f8ff; max-width: 300px;" onchange="updateSuggestedRate()"></select>
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px;">
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W2" onchange="updateSuggestedRate()"> W2: Umowa min. 3 miesiące</label></div>
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W3" onchange="updateSuggestedRate()"> W3: Nieodpłatne zajęcia dla dzieci/młodzieży</label></div>
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W4" onchange="updateSuggestedRate()"> W4: Działalność edukacyjna szkoły/placówki</label></div>
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W5" onchange="updateSuggestedRate()"> W5: Prowadzenie stołówki</label></div>
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W6" onchange="updateSuggestedRate()"> W6: Bezpłatne zadania dla mieszkańców</label></div>
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W7" onchange="updateSuggestedRate()"> W7: OKE / Kuratorium</label></div>
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W8" onchange="updateSuggestedRate()"> W8: Uczniowski Klub Sportowy (UKS)</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W2" onchange="updateSuggestedRate()"> W2</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W3" onchange="updateSuggestedRate()"> W3</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W4" onchange="updateSuggestedRate()"> W4</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W5" onchange="updateSuggestedRate()"> W5</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W6" onchange="updateSuggestedRate()"> W6</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W7" onchange="updateSuggestedRate()"> W7</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W8" onchange="updateSuggestedRate()"> W8</label></div>
                     </div>
                 </div>
 
                 <!-- SEKCJA POMIESZCZEŃ -->
                 <div style="margin-bottom: 25px;">
                     <h4 style="margin: 0 0 15px 0; font-size: 15px; color: var(--primary); text-transform: uppercase;">2. Wybrane pomieszczenia:</h4>
-                    
-                    <div id="calcRoomsContainer">
-                        <!-- Wiersze dodawane przez JS -->
-                    </div>
-
+                    <div id="calcRoomsContainer"></div>
                     <button onclick="addRoomRow()" style="background: #f1f3f5; color: #2c3e50; border: 1px dashed #adb5bd; border-radius: 8px; padding: 10px 15px; font-weight: bold; cursor: pointer; width: 100%; transition: all 0.2s;">➕ Dodaj kolejne pomieszczenie</button>
                 </div>
 
@@ -173,7 +162,6 @@
                     <div>
                         <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid var(--primary); padding-bottom: 8px;">📑 Rozliczenie i Umowa</h3>
                         
-                        <!-- ZAKRES UMOWY -->
                         <div style="background: #ffffff; border: 1px solid #dee2e6; border-radius: 8px; padding: 18px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
                             <h4 style="margin: 0 0 15px 0; color: #495057; font-size: 15px;">📅 Okres obowiązywania</h4>
                             <div class="config-group">
@@ -186,10 +174,8 @@
                             </div>
                         </div>
 
-                        <!-- STAWKI -->
                         <div style="background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%); border: 1px solid #bbe1fa; border-radius: 8px; padding: 18px; box-shadow: 0 2px 8px rgba(0,123,255,0.06);">
                             <h4 style="margin: 0 0 15px 0; color: var(--primary); font-size: 15px;">💰 Stawki godzinowe</h4>
-                            
                             <div class="config-group">
                                 <label>Stawka VAT:</label>
                                 <select id="vatRate" onchange="updateFromVat()" style="background: #fff; font-weight: bold;">
@@ -215,7 +201,6 @@
                                 <input type="number" id="rateBrutto" min="0" step="0.01" value="0" style="text-align: center; font-weight: 800; color: var(--success); font-size: 16px;" oninput="validateNonNegative(this); updateFromBrutto()">
                             </div>
                         </div>
-
                     </div>
 
                     <div style="margin-top: 25px;">
@@ -240,15 +225,11 @@
         </div>
     </div>
 
-    <!-- STOPKA AUTORSKA -->
     <div class="footer">
-         Stworzone przez: <strong>Agnieszka Przekopska-Gaus</strong>
+        Stworzone przez: <strong>Agnieszka Przekopska-Gaus</strong>[cite: 4]
     </div>
-
 </div>
 
-<!-- Podłączenie pliku z kodem JavaScript -->
 <script src="app.js"></script>
-
 </body>
 </html>
