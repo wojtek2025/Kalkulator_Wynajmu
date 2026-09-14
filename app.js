@@ -98,6 +98,58 @@ function validateNonNegative(input) {
     }
 }
 
+function onContractDatesChange(source) {
+    let startEl = document.getElementById(source === 'calc' ? 'calcContractStart' : 'contractStart');
+    let endEl = document.getElementById(source === 'calc' ? 'calcContractEnd' : 'contractEnd');
+    let startVal = startEl.value;
+    let endVal = endEl.value;
+
+    if (source === 'calc') {
+        document.getElementById('contractStart').value = startVal;
+        document.getElementById('contractEnd').value = endVal;
+    } else {
+        document.getElementById('calcContractStart').value = startVal;
+        document.getElementById('calcContractEnd').value = endVal;
+    }
+
+    let noticeEl = document.getElementById('contractDurationNotice');
+    let chkW2 = document.getElementById('chk_glob_W2');
+
+    if (!startVal || !endVal) {
+        if (noticeEl) noticeEl.innerText = "";
+        return;
+    }
+
+    let startDate = new Date(startVal);
+    let endDate = new Date(endVal);
+
+    if (startDate > endDate) {
+        if (noticeEl) noticeEl.innerHTML = "<span style='color:red;'>Data początkowa nie może być późniejsza niż końcowa!</span>";
+        return;
+    }
+
+    let minThreeMonthsDate = new Date(startDate);
+    minThreeMonthsDate.setMonth(minThreeMonthsDate.getMonth() + 3);
+
+    let isMinThreeMonths = endDate >= minThreeMonthsDate;
+
+    if (isMinThreeMonths) {
+        if (chkW2 && !chkW2.checked) {
+            chkW2.checked = true;
+        }
+        if (noticeEl) {
+            noticeEl.innerHTML = "⏱️ Okres umowy wynosi <b style='color:#28a745;'>co najmniej 3 miesiące</b>. Automatycznie zaznaczono wskaźnik <b>W2</b> (możesz go odznaczyć).";
+        }
+    } else {
+        if (noticeEl) {
+            noticeEl.innerHTML = "⏱️ Okres umowy jest <b style='color:#dc3545;'>krótszy niż 3 miesiące</b>.";
+        }
+    }
+
+    updateSuggestedRate();
+    renderCalendar();
+}
+
 function updateSuggestedRate() {
     let distEl = document.getElementById('calcDistrictSelect');
     let w0 = distEl ? (parseFloat(distEl.value) || 1.0) : 1.0;
@@ -119,12 +171,11 @@ function updateSuggestedRate() {
         if (!item) return;
 
         let bsn2 = item.bsn2;
-        let allowedWs = item.w || []; // Teraz to prosta tablica: [1, 2, 3...]
+        let allowedWs = item.w || [];
         
         let w1Chk = row.querySelector('.chk-w1');
         let w1Wrap = row.querySelector('.w1-wrap');
         
-        // Sprawdzenie czy W1 jest dozwolony dla tej sali
         if (allowedWs.includes(1)) {
             w1Wrap.classList.remove('disabled');
             w1Chk.disabled = false;
@@ -136,14 +187,13 @@ function updateSuggestedRate() {
 
         let opg = bsn2 * w0;
         
-        // Mnożnik W1 (z wFactors)
         if (w1Chk.checked && wFactors[1]) {
             opg *= wFactors[1].val;
         }
         
-        // Mnożniki globalne W2-W8 (z wFactors, jeśli zaznaczone i dozwolone dla sali)
         for (let i = 2; i <= 8; i++) {
-            if (globalActive[i] && allowedWs.includes(i) && wFactors[i]) {
+            let isAllowedForRoom = allowedWs.includes(i);
+            if (globalActive[i] && isAllowedForRoom && wFactors[i]) {
                 opg *= wFactors[i].val;
             }
         }
@@ -166,7 +216,13 @@ function transferSuggestedRate() {
     
     document.getElementById('rateNetto').value = totalVal.toFixed(2);
     updateFromNetto();
+
+    let calcStart = document.getElementById('calcContractStart').value;
+    let calcEnd = document.getElementById('calcContractEnd').value;
+    if (calcStart) document.getElementById('contractStart').value = calcStart;
+    if (calcEnd) document.getElementById('contractEnd').value = calcEnd;
     
+    saveConfiguration();
     switchTab('config', document.querySelectorAll('.tab-btn')[3]);
     
     setTimeout(() => {
@@ -242,8 +298,14 @@ function loadConfiguration() {
     if (savedConfig) {
         try {
             let cfg = JSON.parse(savedConfig);
-            if (cfg.start) document.getElementById('contractStart').value = cfg.start;
-            if (cfg.end) document.getElementById('contractEnd').value = cfg.end;
+            if (cfg.start) {
+                document.getElementById('contractStart').value = cfg.start;
+                document.getElementById('calcContractStart').value = cfg.start;
+            }
+            if (cfg.end) {
+                document.getElementById('contractEnd').value = cfg.end;
+                document.getElementById('calcContractEnd').value = cfg.end;
+            }
             if (cfg.vat) document.getElementById('vatRate').value = cfg.vat;
             
             activeRateType = cfg.type || 'brutto';
@@ -254,10 +316,16 @@ function loadConfiguration() {
                 document.getElementById('rateBrutto').value = cfg.rate !== undefined ? cfg.rate : 0;
                 updateFromBrutto();
             }
+
+            if (cfg.start && cfg.end) {
+                onContractDatesChange('config');
+            }
         } catch(e) {}
     } else {
         document.getElementById('contractStart').value = "";
+        document.getElementById('calcContractStart').value = "";
         document.getElementById('contractEnd').value = "";
+        document.getElementById('calcContractEnd').value = "";
         document.getElementById('vatRate').value = "23";
         document.getElementById('rateNetto').value = "0";
         document.getElementById('rateVatAmount').value = "0.00";
@@ -288,6 +356,7 @@ function saveConfiguration() {
     if (startVal && endVal && startVal > endVal) {
         alert("Data początkowa nie może być późniejsza niż data końcowa.");
         document.getElementById('contractEnd').value = startVal;
+        document.getElementById('calcContractEnd').value = startVal;
         return;
     }
 
@@ -304,7 +373,6 @@ function saveConfiguration() {
 
     localStorage.setItem('school_rental_config', JSON.stringify(cfg));
     renderCalendar();
-    switchTab('calc', document.querySelectorAll('.tab-btn')[0]);
 }
 
 function updateHolidaysTextarea() {
@@ -593,7 +661,9 @@ function clearEntireCalendar() {
         localStorage.removeItem('school_rental_config');
 
         document.getElementById('contractStart').value = "";
+        document.getElementById('calcContractStart').value = "";
         document.getElementById('contractEnd').value = "";
+        document.getElementById('calcContractEnd').value = "";
         document.getElementById('vatRate').value = "23";
         document.getElementById('rateNetto').value = "0";
         document.getElementById('rateVatAmount').value = "0.00";
@@ -782,13 +852,11 @@ function updateSummaryTable() {
     }
 }
 
-
 function generatePDFReport() {
     let conf = getActiveRateConfig();
     let startContract = document.getElementById('contractStart').value || "Nie określono";
     let endContract = document.getElementById('contractEnd').value || "Nie określono";
 
-    // Wyliczenie stawek jednostkowych 1h
     let rate = conf.rate;
     let type = conf.type;
     let vat = conf.vat;
@@ -805,7 +873,6 @@ function generatePDFReport() {
         vat1h = brutto1h - netto1h;
     }
 
-    // Grupowanie aktywnych dni per miesiąc
     let monthsMap = {};
     for (let dateStr in assignedData) {
         let val = assignedData[dateStr];
@@ -823,7 +890,6 @@ function generatePDFReport() {
         return;
     }
 
-    // Generowanie tabeli rozliczenia
     let tableRowsHtml = "";
     let totalDaysAll = 0;
     let allValuesGlobal = [];
@@ -864,7 +930,6 @@ function generatePDFReport() {
     let totalHoursGlobalDecimal = sumDecimalHours(allValuesGlobal);
     let avgBrutto = sortedKeys.length > 0 ? (globalBruttoSum / sortedKeys.length) : 0;
 
-    // Generowanie miniatur kalendarza dla wykorzystanych miesięcy
     let miniCalendarsHtml = "";
     sortedKeys.forEach(key => {
         let [yStr, mStr] = key.split('-');
@@ -916,7 +981,6 @@ function generatePDFReport() {
         `;
     });
 
-    // Złożenie kompletnego widoku raportu
     let reportHtml = `
         <div class="report-header">
             <h2 style="margin:0 0 5px 0; font-size:18pt;">Raport Rozliczenia Wynajmu Sal</h2>
@@ -987,6 +1051,7 @@ window.onload = async function() {
     } catch (error) {
         console.warn("Nie udało się pobrać pliku cennik.json przez fetch.", error);
     }
+
     
     initBatchRows(); 
     loadConfiguration();

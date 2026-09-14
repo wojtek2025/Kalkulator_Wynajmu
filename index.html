@@ -94,9 +94,9 @@
                     </div>
 
                     <div>
-    <button onclick="generatePDFReport()" style="background: #17a2b8; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px; font-size: 15px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(23,162,184,0.3);">📄 Drukuj / Eksportuj do PDF</button>
-    <button class="clear-all-btn" onclick="clearEntireCalendar()">🗑️ Resetuj cały kalkulator</button>
-</div>
+                        <button onclick="generatePDFReport()" style="background: #17a2b8; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px; font-size: 15px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(23,162,184,0.3);">📄 Drukuj / Eksportuj do PDF</button>
+                        <button class="clear-all-btn" onclick="clearEntireCalendar()">🗑️ Resetuj cały kalkulator</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,8 +117,24 @@
         <div id="rateCalcTab" class="tab-content">
             <div style="max-width: 900px; margin: auto; background: #fff; padding: 35px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e9ecef;">
                 <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid var(--primary); padding-bottom: 12px; font-size: 22px;">🧮 Kalkulator stawki (Zarządzenie m.st. Warszawy)</h3>
-                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 25px; line-height: 1.5;">Parametry globalne wpływają na całą umowę (wszystkie wynajmowane sale). Multimedia (W1) wybierasz indywidualnie dla każdego dodanego pomieszczenia. System automatycznie przeliczy łączną stawkę bazując na matrycy dozwolonych wskaźników dla danych sal.</p>
+                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 25px; line-height: 1.5;">Wprowadź planowany okres umowy. Jeśli okres wyniesie co najmniej 3 miesiące, wskaźnik W2 zaznaczy się automatycznie (z możliwością odznaczenia).</p>
                 
+                <!-- SEKCJA 0: OKRES UMOWY W KALKULATORZE -->
+                <div style="background: #eef6ff; border: 1px solid #b8daff; padding: 18px; border-radius: 10px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 15px; color: var(--primary); text-transform: uppercase;">📅 Okres obowiązywania umowy:</h4>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div class="config-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                            <label>Data od (początek):</label>
+                            <input type="date" id="calcContractStart" style="font-weight: bold; color: var(--primary); background: #fff;" onchange="onContractDatesChange('calc')">
+                        </div>
+                        <div class="config-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                            <label>Data do (koniec):</label>
+                            <input type="date" id="calcContractEnd" style="font-weight: bold; color: var(--primary); background: #fff;" onchange="onContractDatesChange('calc')">
+                        </div>
+                    </div>
+                    <div id="contractDurationNotice" style="font-size: 12px; color: #495057; margin-top: 8px; font-weight: 600;"></div>
+                </div>
+
                 <!-- SEKCJA GLOBALNA -->
                 <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
                     <h4 style="margin: 0 0 15px 0; font-size: 15px; color: var(--primary); text-transform: uppercase;">1. Parametry Globalne Umowy:</h4>
@@ -129,7 +145,7 @@
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px;">
-                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W2" onchange="updateSuggestedRate()"> W2</label></div>
+                        <div class="w-option"><label><input type="checkbox" id="chk_glob_W2" onchange="updateSuggestedRate()"> W2: Umowa min. 3 miesiące</label></div>
                         <div class="w-option"><label><input type="checkbox" id="chk_glob_W3" onchange="updateSuggestedRate()"> W3</label></div>
                         <div class="w-option"><label><input type="checkbox" id="chk_glob_W4" onchange="updateSuggestedRate()"> W4</label></div>
                         <div class="w-option"><label><input type="checkbox" id="chk_glob_W5" onchange="updateSuggestedRate()"> W5</label></div>
@@ -152,7 +168,7 @@
                     <span id="displaySuggestedRate" style="font-size: 38px; font-weight: 800; display: block; margin-top: 10px; color: var(--success);">0,00 zł / h</span>
                 </div>
 
-                <button onclick="transferSuggestedRate()" class="save-btn" style="background: var(--primary); padding: 16px; font-size: 18px;">➡️ Przenieś łączną stawkę do Konfiguracji Umowy</button>
+                <button onclick="transferSuggestedRate()" class="save-btn" style="background: var(--primary); padding: 16px; font-size: 18px;">➡️ Przenieś łączną stawkę i daty do Konfiguracji Umowy</button>
             </div>
         </div>
 
@@ -167,11 +183,11 @@
                             <h4 style="margin: 0 0 15px 0; color: #495057; font-size: 15px;">📅 Okres obowiązywania</h4>
                             <div class="config-group">
                                 <label>Data od (początek):</label>
-                                <input type="date" id="contractStart" style="font-weight: bold; color: var(--primary);">
+                                <input type="date" id="contractStart" style="font-weight: bold; color: var(--primary);" onchange="onContractDatesChange('config')">
                             </div>
                             <div class="config-group">
                                 <label>Data do (koniec):</label>
-                                <input type="date" id="contractEnd" style="font-weight: bold; color: var(--primary);">
+                                <input type="date" id="contractEnd" style="font-weight: bold; color: var(--primary);" onchange="onContractDatesChange('config')">
                             </div>
                         </div>
 
@@ -229,8 +245,6 @@
     <div class="footer">
         Stworzone przez: <strong>Agnieszka Przekopska-Gaus</strong>
     </div>
-
-
 </div>
 
 <div id="reportPrintArea" class="print-only"></div>
