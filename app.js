@@ -1096,11 +1096,23 @@ function refreshReportView() {
     `;
 }
 
-// Bezpieczne wywołanie druku z wymuszeniem aktywacji zakładki raportu
+// Bezpieczne wywołanie druku z klonowaniem raportu
 function triggerPrintWithRefresh() {
     const reportTabBtn = document.querySelectorAll('.tab-btn')[4];
     switchTab('report', reportTabBtn);
     refreshReportView();
+
+    // Tworzymy ukryty główny kontener dedykowany tylko do druku
+    let printContainer = document.getElementById('print-container');
+    if (!printContainer) {
+        printContainer = document.createElement('div');
+        printContainer.id = 'print-container';
+        document.body.appendChild(printContainer);
+    }
+    
+    // Kopiujemy czysty raport, odcinając go od głównego układu strony
+    printContainer.innerHTML = document.getElementById('reportDisplayArea').innerHTML;
+
     setTimeout(() => {
         window.print();
     }, 200);
