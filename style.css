@@ -495,28 +495,33 @@ input[type="checkbox"] {
 
 .footer strong { color: var(--text-main); }
 
+
 /* Stylizacja raportu drukowanego */
 .print-only {
     display: none;
 }
 
 @media print {
+    /* Ukrywamy tylko aplikację */
+    body > .container {
+        display: none !important;
+    }
+
     body {
-        background: #fff !important;
-        color: #000 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
         padding: 0 !important;
         font-size: 11pt;
     }
 
-    .container, .tabs, .content-wrapper, .footer {
-        display: none !important;
-    }
-
-    .print-only {
+    /* Pokazujemy raport */
+    #reportPrintArea.print-only {
         display: block !important;
-        width: 100%;
-        margin: 0;
-        padding: 10mm;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 10mm !important;
+        box-sizing: border-box !important;
     }
 
     .report-header {
@@ -535,7 +540,7 @@ input[type="checkbox"] {
     }
 
     .report-meta-box {
-        border: 1px solid #ccc;
+        border: 1px solid #999;
         padding: 10px;
         border-radius: 4px;
     }
@@ -572,24 +577,26 @@ input[type="checkbox"] {
 
     .page-break {
         page-break-before: always;
+        break-before: page;
     }
 
     .calendar-print-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
+        gap: 15px;
     }
 
     .mini-month {
-        border: 1px solid #ccc;
+        border: 1px solid #bbb;
         border-radius: 4px;
         padding: 8px;
         page-break-inside: avoid;
+        break-inside: avoid;
     }
 
     .mini-month h4 {
         text-align: center;
-        margin: 0 0 8px 0;
+        margin: 0 0 6px 0;
         font-size: 10pt;
         text-transform: uppercase;
     }
@@ -612,11 +619,12 @@ input[type="checkbox"] {
 
     .mini-cell {
         border: 1px solid #ddd;
-        min-height: 32px;
+        min-height: 28px;
         padding: 2px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        align-items: center;
     }
 
     .mini-cell.empty {
@@ -633,7 +641,7 @@ input[type="checkbox"] {
 
     .mini-cell.holiday {
         background-color: #fff3cd !important;
-        color: #856404;
+        color: #856404 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
