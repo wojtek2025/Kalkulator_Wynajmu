@@ -782,6 +782,199 @@ function updateSummaryTable() {
     }
 }
 
+
+function generatePDFReport() {
+    let conf = getActiveRateConfig();
+    let startContract = document.getElementById('contractStart').value || "Nie określono";
+    let endContract = document.getElementById('contractEnd').value || "Nie określono";
+
+    // Wyliczenie stawek jednostkowych 1h
+    let rate = conf.rate;
+    let type = conf.type;
+    let vat = conf.vat;
+    let netto1h = 0, vat1h = 0, brutto1h = 0;
+    let rateGrosze = Math.round(rate * 100);
+
+    if (type === 'netto') {
+        netto1h = rateGrosze / 100;
+        vat1h = Math.round(netto1h * (vat / 100) * 100) / 100;
+        brutto1h = netto1h + vat1h;
+    } else {
+        brutto1h = rateGrosze / 100;
+        netto1h = Math.round((brutto1h / (1 + vat / 100)) * 100) / 100;
+        vat1h = brutto1h - netto1h;
+    }
+
+    // Grupowanie aktywnych dni per miesiąc
+    let monthsMap = {};
+    for (let dateStr in assignedData) {
+        let val = assignedData[dateStr];
+        if (val > 0) {
+            let monthKey = dateStr.substring(0, 7);
+            if (!monthsMap[monthKey]) monthsMap[monthKey] = { days: 0, values: [] };
+            monthsMap[monthKey].days++;
+            monthsMap[monthKey].values.push(val);
+        }
+    }
+
+    let sortedKeys = Object.keys(monthsMap).sort();
+    if (sortedKeys.length === 0) {
+        alert("Brak wprowadzonych godzin wynajmu. Przypisz godziny w kalendarzu, aby wygenerować raport.");
+        return;
+    }
+
+    // Generowanie tabeli rozliczenia
+    let tableRowsHtml = "";
+    let totalDaysAll = 0;
+    let allValuesGlobal = [];
+    let globalNettoSum = 0;
+    let globalVatSum = 0;
+    let globalBruttoSum = 0;
+
+    sortedKeys.forEach(key => {
+        let [y, m] = key.split('-');
+        let monthName = monthNames[parseInt(m) - 1];
+        let monthLabel = `${monthName} ${y}`;
+
+        let daysCount = monthsMap[key].days;
+        let monthValues = monthsMap[key].values;
+
+        totalDaysAll += daysCount;
+        allValuesGlobal = allValuesGlobal.concat(monthValues);
+
+        let hoursSumDecimal = sumDecimalHours(monthValues);
+        let fin = calculateFinancials(hoursSumDecimal);
+
+        globalNettoSum += fin.netto;
+        globalVatSum += fin.vat;
+        globalBruttoSum += fin.brutto;
+
+        tableRowsHtml += `
+            <tr>
+                <td>${monthLabel}</td>
+                <td>${daysCount}</td>
+                <td>${hoursSumDecimal}h</td>
+                <td>${formatCurrency(fin.netto)}</td>
+                <td>${formatCurrency(fin.vat)}</td>
+                <td><b>${formatCurrency(fin.brutto)}</b></td>
+            </tr>
+        `;
+    });
+
+    let totalHoursGlobalDecimal = sumDecimalHours(allValuesGlobal);
+    let avgBrutto = sortedKeys.length > 0 ? (globalBruttoSum / sortedKeys.length) : 0;
+
+    // Generowanie miniatur kalendarza dla wykorzystanych miesięcy
+    let miniCalendarsHtml = "";
+    sortedKeys.forEach(key => {
+        let [yStr, mStr] = key.split('-');
+        let yearNum = parseInt(yStr);
+        let monthIdx = parseInt(mStr) - 1;
+
+        let firstDayIndex = (new Date(yearNum, monthIdx, 1).getDay() + 6) % 7;
+        let daysInMonth = new Date(yearNum, monthIdx + 1, 0).getDate();
+
+        let cellsHtml = "";
+        for (let i = 0; i < firstDayIndex; i++) {
+            cellsHtml += `<div class="mini-cell empty"></div>`;
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            let dd = String(day).padStart(2, '0');
+            let dateStr = `${yearNum}-${mStr}-${dd}`;
+            let monthDayStr = `${mStr}-${dd}`;
+
+            let holidayName = checkIsHoliday(dateStr, monthDayStr);
+            let isHoliday = holidayName !== null;
+            let val = assignedData[dateStr] || 0;
+
+            let cellClass = "mini-cell";
+            let content = `<span>${day}</span>`;
+
+            if (isHoliday) {
+                cellClass += " holiday";
+                content += `<span style="font-size:6pt;">Święto</span>`;
+            } else if (val > 0) {
+                cellClass += " active";
+                content += `<span style="font-size:7pt; color:#1e7e34;">${val}h</span>`;
+            }
+
+            cellsHtml += `<div class="${cellClass}">${content}</div>`;
+        }
+
+        miniCalendarsHtml += `
+            <div class="mini-month">
+                <h4>${monthNames[monthIdx]} ${yearNum}</h4>
+                <div class="mini-grid">
+                    <div class="mini-day-header">Pn</div><div class="mini-day-header">Wt</div>
+                    <div class="mini-day-header">Śr</div><div class="mini-day-header">Cz</div>
+                    <div class="mini-day-header">Pt</div><div class="mini-day-header">So</div>
+                    <div class="mini-day-header" style="color:red;">Nd</div>
+                    ${cellsHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    // Złożenie kompletnego widoku raportu
+    let reportHtml = `
+        <div class="report-header">
+            <h2 style="margin:0 0 5px 0; font-size:18pt;">Raport Rozliczenia Wynajmu Sal Oświatowych</h2>
+            <div style="font-size:10pt; color:#555;">Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</div>
+        </div>
+
+        <div class="report-meta-grid">
+            <div class="report-meta-box">
+                <b>Okres obowiązywania umowy:</b><br>
+                Od: <b>${startContract}</b> do: <b>${endContract}</b><br><br>
+                <b>Łączny czas wynajmu:</b> ${totalDaysAll} dni / <b>${totalHoursGlobalDecimal}h</b>
+            </div>
+            <div class="report-meta-box">
+                <b>Stawka godzinowa bazowa:</b><br>
+                Netto: <b>${formatCurrency(netto1h)}/h</b> | VAT (${vat}%): <b>${formatCurrency(vat1h)}/h</b><br>
+                Brutto: <b style="font-size:11pt;">${formatCurrency(brutto1h)}/h</b><br><br>
+                Średnia miesięczna: <b>${formatCurrency(avgBrutto)} brutto</b>
+                ${avgBrutto > 2500 ? '<br><span style="color:red; font-weight:bold;">(Wymagana opłata kaucyjna / zabezpieczenie)</span>' : ''}
+            </div>
+        </div>
+
+        <h3 style="font-size:13pt; margin: 20px 0 10px 0;">Zestawienie Finansowe Miesięczne</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Miesiąc</th>
+                    <th>Liczba dni</th>
+                    <th>Liczba godzin</th>
+                    <th>Wartość Netto</th>
+                    <th>Kwota VAT</th>
+                    <th>Wartość Brutto</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRowsHtml}
+                <tr class="report-total-row">
+                    <td>ŁĄCZNIE</td>
+                    <td>${totalDaysAll}</td>
+                    <td>${totalHoursGlobalDecimal}h</td>
+                    <td>${formatCurrency(globalNettoSum)}</td>
+                    <td>${formatCurrency(globalVatSum)}</td>
+                    <td>${formatCurrency(globalBruttoSum)}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="page-break"></div>
+
+        <h3 style="font-size:13pt; margin: 20px 0 10px 0;">Szczegółowy Harmonogram Dni i Godzin Wynajmu</h3>
+        <div class="calendar-print-grid">
+            ${miniCalendarsHtml}
+        </div>
+    `;
+
+    document.getElementById('reportPrintArea').innerHTML = reportHtml;
+    window.print();
+}
+
 window.onload = async function() {
     try {
         const response = await fetch('cennik.json');

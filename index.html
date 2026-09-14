@@ -94,8 +94,9 @@
                     </div>
 
                     <div>
-                        <button class="clear-all-btn" onclick="clearEntireCalendar()">🗑️ Resetuj cały kalkulator</button>
-                    </div>
+    <button onclick="generatePDFReport()" style="background: #17a2b8; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px; font-size: 15px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(23,162,184,0.3);">📄 Drukuj / Eksportuj do PDF</button>
+    <button class="clear-all-btn" onclick="clearEntireCalendar()">🗑️ Resetuj cały kalkulator</button>
+</div>
                 </div>
             </div>
         </div>
@@ -228,6 +229,10 @@
     <div class="footer">
         Stworzone przez: <strong>Agnieszka Przekopska-Gaus</strong>[cite: 4]
     </div>
+
+<!-- Szablon raportu do wydruku / zapisu w PDF -->
+    <div id="reportPrintArea" class="print-only"></div>
+
 </div>
 
 <script src="app.js"></script>
