@@ -919,7 +919,7 @@ function generatePDFReport() {
     // Złożenie kompletnego widoku raportu
     let reportHtml = `
         <div class="report-header">
-            <h2 style="margin:0 0 5px 0; font-size:18pt;">Raport Rozliczenia Wynajmu Sal Oświatowych</h2>
+            <h2 style="margin:0 0 5px 0; font-size:18pt;">Raport Rozliczenia Wynajmu Sal</h2>
             <div style="font-size:10pt; color:#555;">Wygenerowano: ${new Date().toLocaleDateString('pl-PL')}</div>
         </div>
 
