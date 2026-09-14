@@ -655,7 +655,7 @@ input[type="checkbox"] {
 .report-table th:first-child, .report-table td:first-child { text-align: left; }
 .report-table th { background: #f8f9fa; font-weight: 700; color: #495057; }
 .report-total-row { font-weight: 800; background: #e9ecef; }
-.calendar-print-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.calendar-print-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
 .mini-month { border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; background: #fff; }
 .mini-month h4 { text-align: center; margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; color: #2c3e50; }
 .mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 11px; }
@@ -665,9 +665,22 @@ input[type="checkbox"] {
 .mini-cell.active { background-color: #d4edda !important; border: 1px solid #28a745 !important; font-weight: bold; }
 .mini-cell.holiday { background-color: #fff3cd !important; color: #856404; border: 1px solid #ffeeba !important; }
 
-/* Poprawione reguły wydruku i generowania PDF */
+/* Niezawodne reguły druku */
 @media print {
-    /* Nie ukrywamy .container, tylko jego zbędne elementy */
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 9.5pt;
+    }
+
+    /* Ukrywamy wszystko z wyjątkiem zakładki raportu */
     .tabs,
     .controls,
     .action-box,
@@ -681,14 +694,6 @@ input[type="checkbox"] {
     #rateCalcTab,
     #configTab {
         display: none !important;
-    }
-
-    body {
-        background: #ffffff !important;
-        color: #000000 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        font-size: 10pt;
     }
 
     .container {
@@ -710,8 +715,10 @@ input[type="checkbox"] {
         display: none !important;
     }
 
-    #reportTab {
+    /* Bezwzględne pokazanie zakładki raportu */
+    div#reportTab {
         display: block !important;
+        visibility: visible !important;
         padding: 0 !important;
         margin: 0 !important;
     }
@@ -728,30 +735,34 @@ input[type="checkbox"] {
         display: none !important;
     }
 
-    /* Wymuszenie drukowania kolorów i tła kratek kalendarza */
+    #reportDisplayArea {
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    /* Wymuszenie druku kolorów kratek */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
 
-    .page-break {
-        page-break-before: always;
-        break-before: page;
+    .calendar-print-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        page-break-inside: auto;
     }
 
     .mini-month {
-        page-break-inside: avoid;
-        break-inside: avoid;
-        border: 1px solid #999 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #777 !important;
+        margin-bottom: 10px;
     }
 
-    .report-table th {
-        background-color: #eee !important;
-        border: 1px solid #444 !important;
-    }
-
-    .report-table td {
-        border: 1px solid #444 !important;
+    .mini-cell {
+        min-height: 28px !important;
+        border: 1px solid #aaa !important;
     }
 
     .mini-cell.active {
@@ -762,6 +773,24 @@ input[type="checkbox"] {
     .mini-cell.holiday {
         background-color: #fff3cd !important;
         border: 1px solid #ffeeba !important;
+    }
+
+    .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+    }
+
+    .report-table {
+        width: 100% !important;
+    }
+
+    .report-table th {
+        background-color: #eee !important;
+        border: 1px solid #333 !important;
+    }
+
+    .report-table td {
+        border: 1px solid #333 !important;
     }
 }
 }

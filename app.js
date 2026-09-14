@@ -8,6 +8,7 @@ let fixedHolidays = {};
 let wFactors = {};
 let customHolidays = {};
 
+// Inicjalizacja wierszy szybkiego przypisania z odtworzeniem zapisanych stanów
 function initBatchRows() {
     const container = document.getElementById('batchRowsContainer');
     if (!container) return;
@@ -15,19 +16,45 @@ function initBatchRows() {
         { id: 1, name: "Poniedziałek" }, { id: 2, name: "Wtorek" }, { id: 3, name: "Środa" },
         { id: 4, name: "Czwartek" }, { id: 5, name: "Piątek" }, { id: 6, name: "Sobota" }, { id: 0, name: "Niedziela", color: "#dc3545" }
     ];
+
+    let savedBatch = {};
+    try {
+        savedBatch = JSON.parse(localStorage.getItem('school_rental_batch_data')) || {};
+    } catch (e) {
+        savedBatch = {};
+    }
+
     let html = '';
     daysData.forEach(d => {
+        let isChecked = savedBatch[d.id] && savedBatch[d.id].checked ? 'checked' : '';
+        let val = savedBatch[d.id] && savedBatch[d.id].val !== undefined ? savedBatch[d.id].val : '0.0';
         html += `
             <div class="batch-row" style="background: #fff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e9ecef;">
-                <input type="checkbox" id="chk_${d.id}" value="${d.id}">
+                <input type="checkbox" id="chk_${d.id}" value="${d.id}" ${isChecked} onchange="saveBatchInputsState()">
                 <label for="chk_${d.id}" style="cursor: pointer; font-weight: 600; color: ${d.color || '#495057'};">${d.name}</label>
-                <input type="number" id="val_${d.id}" min="0" step="0.01" value="0.0" style="text-align: center; font-weight: bold;" oninput="validateNonNegative(this); updateBatchPreview(${d.id})">
+                <input type="number" id="val_${d.id}" min="0" step="0.01" value="${val}" style="text-align: center; font-weight: bold;" oninput="validateNonNegative(this); updateBatchPreview(${d.id}); saveBatchInputsState()">
                 <span style="color: var(--text-muted);">h</span>
                 <span id="prev_${d.id}" style="font-size: 13px; color: var(--primary); font-weight: bold; text-align: left;">(0h 00m)</span>
             </div>
         `;
     });
     container.innerHTML = html;
+}
+
+// Zapisywanie konfiguracji szybkiego przypisania do pamięci przeglądarki
+function saveBatchInputsState() {
+    let batchState = {};
+    for (let i = 0; i <= 6; i++) {
+        let chk = document.getElementById(`chk_${i}`);
+        let valInput = document.getElementById(`val_${i}`);
+        if (chk && valInput) {
+            batchState[i] = {
+                checked: chk.checked,
+                val: parseFloat(valInput.value) || 0
+            };
+        }
+    }
+    localStorage.setItem('school_rental_batch_data', JSON.stringify(batchState));
 }
 
 function initGlobalIndicators() {
@@ -445,7 +472,9 @@ function switchTab(tabId, btnElement) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
     document.getElementById(tabId + 'Tab').classList.add('active');
-    btnElement.classList.add('active');
+    if (btnElement) {
+        btnElement.classList.add('active');
+    }
 }
 
 function formatCurrency(amount) {
@@ -492,6 +521,8 @@ function applyBatchAssignment() {
         switchTab('config', document.querySelectorAll('.tab-btn')[3]);
         return;
     }
+
+    saveBatchInputsState();
 
     let activeDays = {};
     for (let i = 0; i <= 6; i++) {
@@ -679,6 +710,7 @@ function clearEntireCalendar() {
         selectedDays.clear();
         localStorage.removeItem('school_rental_config');
         localStorage.removeItem('school_rental_assigned_data');
+        localStorage.removeItem('school_rental_batch_data');
 
         document.getElementById('contractStart').value = "";
         document.getElementById('calcContractStart').value = "";
@@ -1063,12 +1095,17 @@ function refreshReportView() {
         </div>
     `;
 }
+
+// Bezpieczne wywołanie druku z wymuszeniem aktywacji zakładki raportu
 function triggerPrintWithRefresh() {
+    const reportTabBtn = document.querySelectorAll('.tab-btn')[4];
+    switchTab('report', reportTabBtn);
     refreshReportView();
     setTimeout(() => {
         window.print();
-    }, 150);
+    }, 200);
 }
+
 window.onload = async function() {
     try {
         const response = await fetch('cennik.json');
