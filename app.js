@@ -1378,8 +1378,8 @@ window.onload = async function() {
     loadConfiguration();
     renderCalendar();
 };
-// Funkcja wyświetlająca dymek z powiadomieniem
-function showToast(message) {
+// Ulepszona funkcja dymka obsługująca błędy (isError)
+function showToast(message, isError = false) {
     let toast = document.getElementById("toast-notification");
     if (!toast) {
         toast = document.createElement("div");
@@ -1387,11 +1387,84 @@ function showToast(message) {
         toast.className = "toast-notification";
         document.body.appendChild(toast);
     }
+    
     toast.innerText = message;
+    
+    // Jeśli to błąd, dodajemy czerwoną klasę, w przeciwnym razie usuwamy
+    if (isError) {
+        toast.classList.add("error");
+    } else {
+        toast.classList.remove("error");
+    }
+    
     toast.classList.add("show");
     
-    // Dymek znika automatycznie po 3.5 sekundach
     setTimeout(() => { 
         toast.classList.remove("show"); 
     }, 3500);
+}
+// Zaktualizowane Szybkie Przypisanie (bez użycia window.alert)
+function applyBatchAssignment() {
+    let startContract = document.getElementById('contractStart').value;
+    let endContract = document.getElementById('contractEnd').value;
+
+    if (!startContract || !endContract) {
+        showToast("⚠️ Błąd: Ustaw zakres umowy w Konfiguracji lub Wylicz Stawkę!", true);
+        switchTab('config', document.querySelectorAll('.tab-btn')[3]);
+        return;
+    }
+
+    saveBatchInputsState();
+
+    let activeDays = {};
+    for (let i = 0; i <= 6; i++) {
+        let chk = document.getElementById(`chk_${i}`);
+        if (chk && chk.checked) {
+            let val = parseFloat(document.getElementById(`val_${i}`).value) || 0;
+            if (val < 0) val = 0;
+            activeDays[i] = val;
+        }
+    }
+
+    if (Object.keys(activeDays).length === 0) {
+        showToast("⚠️ Zaznacz przynajmniej jeden dzień i podaj liczbę godzin.", true);
+        return;
+    }
+
+    let [sY, sM, sD] = startContract.split('-').map(Number);
+    let [eY, eM, eD] = endContract.split('-').map(Number);
+    
+    let curr = new Date(sY, sM - 1, sD);
+    let end = new Date(eY, eM - 1, eD);
+
+    let countAssigned = 0;
+    while (curr <= end) {
+        let y = curr.getFullYear();
+        let m = String(curr.getMonth() + 1).padStart(2, '0');
+        let d = String(curr.getDate()).padStart(2, '0');
+        let dateStr = `${y}-${m}-${d}`;
+        let mdStr = `${m}-${d}`;
+
+        let dayOfWeek = curr.getDay();
+        let isHoliday = checkIsHoliday(dateStr, mdStr) !== null;
+
+        if (!isHoliday && activeDays.hasOwnProperty(dayOfWeek)) {
+            let hrs = activeDays[dayOfWeek];
+            if (hrs > 0) {
+                assignedData[dateStr] = hrs;
+                countAssigned++;
+            } else {
+                delete assignedData[dateStr];
+            }
+        }
+
+        curr.setDate(curr.getDate() + 1);
+    }
+
+    saveAssignedData();
+    renderCalendar();
+    switchTab('calc', document.querySelectorAll('.tab-btn')[0]);
+    
+    // Piękny dymek na zakończenie procesu!
+    showToast(`✅ Zaktualizowano! Uzupełniono harmonogram dla ${countAssigned} dni.`);
 }

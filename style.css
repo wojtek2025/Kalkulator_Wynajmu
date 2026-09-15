@@ -549,7 +549,9 @@ input[type="checkbox"] {
     opacity: 1;
     bottom: 50px;
 }
-
+.toast-notification.error {
+    background-color: #dc3545; /* Czerwony kolor błędu */
+}
 
 
 
