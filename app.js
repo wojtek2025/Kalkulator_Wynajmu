@@ -1178,3 +1178,167 @@ window.onload = async function() {
     loadConfiguration();
     renderCalendar();
 };
+
+function exportReportToExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert("Błąd: Nie załadowano biblioteki Excel. Upewnij się, że dodano znacznik <script> w index.html.");
+        return;
+    }
+
+    let conf = getActiveRateConfig();
+    let startContract = document.getElementById('contractStart').value || "Nie określono";
+    let endContract = document.getElementById('contractEnd').value || "Nie określono";
+
+    // Wyliczenie stawek jednostkowych
+    let rate = conf.rate;
+    let type = conf.type;
+    let vat = conf.vat;
+    let netto1h = 0, vat1h = 0, brutto1h = 0;
+    let rateGrosze = Math.round(rate * 100);
+
+    if (type === 'netto') {
+        netto1h = rateGrosze / 100;
+        vat1h = Math.round(netto1h * (vat / 100) * 100) / 100;
+        brutto1h = netto1h + vat1h;
+    } else {
+        brutto1h = rateGrosze / 100;
+        netto1h = Math.round((brutto1h / (1 + vat / 100)) * 100) / 100;
+        vat1h = brutto1h - netto1h;
+    }
+
+    // Grupowanie aktywnych dni per miesiąc
+    let monthsMap = {};
+    for (let dateStr in assignedData) {
+        let val = assignedData[dateStr];
+        if (val > 0) {
+            let monthKey = dateStr.substring(0, 7);
+            if (!monthsMap[monthKey]) monthsMap[monthKey] = { days: 0, values: [] };
+            monthsMap[monthKey].days++;
+            monthsMap[monthKey].values.push(val);
+        }
+    }
+
+    let sortedKeys = Object.keys(monthsMap).sort();
+    if (sortedKeys.length === 0) {
+        alert("Brak wprowadzonych godzin wynajmu do wyeksportowania.");
+        return;
+    }
+
+    // --- ARKUSZ 1: PODSUMOWANIE I UMOWA ---
+    let summaryData = [
+        ["RAPORT ROZLICZENIA WYNAJMU SAL OŚWIATOWYCH", ""],
+        ["Data wygenerowania raportu:", new Date().toLocaleDateString('pl-PL')],
+        ["", ""],
+        ["PARAMETRY UMOWY I STAWKI", ""],
+        ["Okres umowy od:", startContract],
+        ["Okres umowy do:", endContract],
+        ["Stawka bazowa Netto [zł/h]:", netto1h],
+        ["Stawka VAT (%):", vat + "%"],
+        ["Kwota VAT [zł/h]:", vat1h],
+        ["Stawka bazowa Brutto [zł/h]:", brutto1h],
+        ["", ""]
+    ];
+
+    // --- ARKUSZ 2: ZESTAWIENIE MIESIĘCZNE ---
+    let monthlyRows = [
+        ["Miesiąc", "Liczba dni", "Liczba godzin [h]", "Wartość Netto [zł]", "Kwota VAT [zł]", "Wartość Brutto [zł]"]
+    ];
+
+    let totalDaysAll = 0;
+    let allValuesGlobal = [];
+    let globalNettoSum = 0;
+    let globalVatSum = 0;
+    let globalBruttoSum = 0;
+
+    sortedKeys.forEach(key => {
+        let [y, m] = key.split('-');
+        let monthName = monthNames[parseInt(m) - 1];
+        let monthLabel = `${monthName} ${y}`;
+
+        let daysCount = monthsMap[key].days;
+        let monthValues = monthsMap[key].values;
+
+        totalDaysAll += daysCount;
+        allValuesGlobal = allValuesGlobal.concat(monthValues);
+
+        let hoursSumDecimal = sumDecimalHours(monthValues);
+        let fin = calculateFinancials(hoursSumDecimal);
+
+        globalNettoSum += fin.netto;
+        globalVatSum += fin.vat;
+        globalBruttoSum += fin.brutto;
+
+        monthlyRows.push([
+            monthLabel,
+            daysCount,
+            hoursSumDecimal,
+            parseFloat(fin.netto.toFixed(2)),
+            parseFloat(fin.vat.toFixed(2)),
+            parseFloat(fin.brutto.toFixed(2))
+        ]);
+    });
+
+    let totalHoursGlobalDecimal = sumDecimalHours(allValuesGlobal);
+    let avgBrutto = sortedKeys.length > 0 ? (globalBruttoSum / sortedKeys.length) : 0;
+
+    // Wiersz podsumowania
+    monthlyRows.push([
+        "ŁĄCZNIE",
+        totalDaysAll,
+        totalHoursGlobalDecimal,
+        parseFloat(globalNettoSum.toFixed(2)),
+        parseFloat(globalVatSum.toFixed(2)),
+        parseFloat(globalBruttoSum.toFixed(2))
+    ]);
+
+    // Dopisanie podsumowania do Arkusza 1
+    summaryData.push(
+        ["PODSUMOWANIE FINANSOWE", ""],
+        ["Łączny czas wynajmu (dni):", totalDaysAll],
+        ["Łączny czas wynajmu (godziny):", totalHoursGlobalDecimal],
+        ["Łączna kwota Netto [zł]:", parseFloat(globalNettoSum.toFixed(2))],
+        ["Łączna kwota VAT [zł]:", parseFloat(globalVatSum.toFixed(2))],
+        ["Łączna kwota Brutto [zł]:", parseFloat(globalBruttoSum.toFixed(2))],
+        ["Średnia miesięczna (Brutto) [zł]:", parseFloat(avgBrutto.toFixed(2))],
+        ["Wymóg kaucji / zabezpieczenia:", avgBrutto > 2500 ? "TAK - WYMAGANE ZABEZPIECZENIE (powyżej 2500 zł brutto/m-c)" : "NIE"]
+    );
+
+    // --- ARKUSZ 3: SZCZEGÓŁOWY HARMONOGRAM DNI ---
+    let scheduleRows = [
+        ["Lp.", "Data (RRRR-MM-DD)", "Dzień tygodnia", "Liczba godzin [h]"]
+    ];
+
+    let sortedDates = Object.keys(assignedData).filter(d => assignedData[d] > 0).sort();
+    let dayNamesPL = ["Niedziela", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
+
+    sortedDates.forEach((dateStr, idx) => {
+        let dateObj = new Date(dateStr);
+        let dayName = dayNamesPL[dateObj.getDay()];
+        scheduleRows.push([
+            idx + 1,
+            dateStr,
+            dayName,
+            assignedData[dateStr]
+        ]);
+    });
+
+    // Tworzenie skoroszytu XLSX
+    let wb = XLSX.utils.book_new();
+
+    let wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    let wsMonthly = XLSX.utils.aoa_to_sheet(monthlyRows);
+    let wsSchedule = XLSX.utils.aoa_to_sheet(scheduleRows);
+
+    // Ustawienie szerokości kolumn
+    wsSummary['!cols'] = [{ wch: 35 }, { wch: 45 }];
+    wsMonthly['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 20 }, { wch: 16 }, { wch: 20 }];
+    wsSchedule['!cols'] = [{ wch: 8 }, { wch: 20 }, { wch: 18 }, { wch: 18 }];
+
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Podsumowanie");
+    XLSX.utils.book_append_sheet(wb, wsMonthly, "Zestawienie Miesięczne");
+    XLSX.utils.book_append_sheet(wb, wsSchedule, "Harmonogram Dni");
+
+    // Zapis pliku
+    let fileName = `Rozliczenie_Wynajmu_${startContract}_${endContract}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
