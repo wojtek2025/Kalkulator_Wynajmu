@@ -416,6 +416,12 @@ function saveConfiguration() {
 
     localStorage.setItem('school_rental_config', JSON.stringify(cfg));
     renderCalendar();
+    
+    // Przełącz na pierwszą zakładkę (Kalkulator i Harmonogram)
+    switchTab('calc', document.querySelectorAll('.tab-btn')[0]);
+    
+    // Wyświetl zielony dymek potwierdzający
+    showToast("✅ Zapisano pomyślnie! Konfiguracja została zaktualizowana.");
 }
 
 function updateHolidaysTextarea() {
@@ -1372,3 +1378,20 @@ window.onload = async function() {
     loadConfiguration();
     renderCalendar();
 };
+// Funkcja wyświetlająca dymek z powiadomieniem
+function showToast(message) {
+    let toast = document.getElementById("toast-notification");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast-notification";
+        toast.className = "toast-notification";
+        document.body.appendChild(toast);
+    }
+    toast.innerText = message;
+    toast.classList.add("show");
+    
+    // Dymek znika automatycznie po 3.5 sekundach
+    setTimeout(() => { 
+        toast.classList.remove("show"); 
+    }, 3500);
+}
