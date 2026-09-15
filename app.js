@@ -165,7 +165,7 @@ function onContractDatesChange(source) {
             chkW2.checked = true;
         }
         if (noticeEl) {
-            noticeEl.innerHTML = "⏱️ Okres umowy wynosi <b style='color:#28a745;'>co najmniej 3 miesiące</b>. Automatycznie zaznaczono wskaźnik <b>W2</b> (możesz go odznaczyć).";
+            noticeEl.innerHTML = "⏱️ Okres umowy wynosi <b style='color:#28a745;'>co najmniej 3 miesiące</b>. Automatycznie zaznaczono wskaźnik <b>W2</b>.";
         }
     } else {
         if (noticeEl) {
@@ -173,7 +173,8 @@ function onContractDatesChange(source) {
         }
     }
 
-    saveConfiguration();
+    // Wykonuje "cichy" zapis, by nie przenosiło z zakładki
+    saveConfiguration(true);
     updateSuggestedRate();
     renderCalendar();
 }
@@ -250,8 +251,12 @@ function transferSuggestedRate() {
     if (calcStart) document.getElementById('contractStart').value = calcStart;
     if (calcEnd) document.getElementById('contractEnd').value = calcEnd;
     
-    saveConfiguration();
+    // Cichy zapis do pamięci podręcznej (bo sami zaraz zmieniamy zakładkę na Konfigurację)
+    saveConfiguration(true);
+    
+    // Przeniesienie użytkownika do Konfiguracji Umowy
     switchTab('config', document.querySelectorAll('.tab-btn')[3]);
+    showToast("✅ Wyliczona stawka i daty zostały przeniesione!");
     
     setTimeout(() => {
         let saveBtn = document.querySelector('#configTab .save-btn');
@@ -265,6 +270,8 @@ function transferSuggestedRate() {
         }
     }, 300);
 }
+
+
 
 function updateFromNetto() {
     activeRateType = 'netto';
@@ -392,12 +399,12 @@ function loadConfiguration() {
     initBatchPreviews();
 }
 
-function saveConfiguration() {
+function saveConfiguration(silent = false) {
     let startVal = document.getElementById('contractStart').value;
     let endVal = document.getElementById('contractEnd').value;
 
     if (startVal && endVal && startVal > endVal) {
-        alert("Data początkowa nie może być późniejsza niż data końcowa.");
+        showToast("⚠️ Data początkowa nie może być późniejsza niż data końcowa.", true);
         document.getElementById('contractEnd').value = startVal;
         document.getElementById('calcContractEnd').value = startVal;
         return;
@@ -417,11 +424,11 @@ function saveConfiguration() {
     localStorage.setItem('school_rental_config', JSON.stringify(cfg));
     renderCalendar();
     
-    // Przełącz na pierwszą zakładkę (Kalkulator i Harmonogram)
-    switchTab('calc', document.querySelectorAll('.tab-btn')[0]);
-    
-    // Wyświetl zielony dymek potwierdzający
-    showToast("✅ Zapisano pomyślnie! Konfiguracja została zaktualizowana.");
+    // Zmienia zakładkę i pokazuje dymek TYLKO gdy klikniesz duży przycisk Zapisu
+    if (silent !== true) {
+        switchTab('calc', document.querySelectorAll('.tab-btn')[0]);
+        showToast("✅ Zapisano pomyślnie! Konfiguracja została zaktualizowana.");
+    }
 }
 
 function updateHolidaysTextarea() {
@@ -494,11 +501,11 @@ function saveHolidaysFromText() {
     updateHolidaysTextarea(); // Odświeża okno tekstowe do idealnego formatu z zerami
     renderCalendar();
     
-    let msg = "Pomyślnie zaktualizowano kalendarz dni wolnych!";
+    let msg = "✅ Zaktualizowano kalendarz dni wolnych!";
     if (removedCount > 0) {
-        msg += `\nUwaga: Usunięto wcześniej przypisane godziny z ${removedCount} dni, które stały się wolne.`;
+        msg += ` Usunięto wcześniej przypisane godziny z ${removedCount} dni, które stały się wolne.`;
     }
-    alert(msg);
+    showToast(msg);
 }
 
 const today = new Date();
