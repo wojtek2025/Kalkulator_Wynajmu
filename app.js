@@ -1139,27 +1139,6 @@ function refreshReportView() {
     `;
 }
 
-// Bezpieczne wywołanie druku z klonowaniem raportu
-function triggerPrintWithRefresh() {
-    const reportTabBtn = document.querySelectorAll('.tab-btn')[4];
-    switchTab('report', reportTabBtn);
-    refreshReportView();
-
-    // Tworzymy ukryty główny kontener dedykowany tylko do druku
-    let printContainer = document.getElementById('print-container');
-    if (!printContainer) {
-        printContainer = document.createElement('div');
-        printContainer.id = 'print-container';
-        document.body.appendChild(printContainer);
-    }
-    
-    // Kopiujemy czysty raport, odcinając go od głównego układu strony
-    printContainer.innerHTML = document.getElementById('reportDisplayArea').innerHTML;
-
-    setTimeout(() => {
-        window.print();
-    }, 200);
-}
 
 window.onload = async function() {
     try {
@@ -1179,6 +1158,29 @@ window.onload = async function() {
     renderCalendar();
 };
 
+
+
+// Bezpieczne wywołanie druku z wymuszeniem aktywacji zakładki raportu
+function triggerPrintWithRefresh() {
+    const reportTabBtn = document.querySelectorAll('.tab-btn')[4];
+    switchTab('report', reportTabBtn);
+    refreshReportView();
+
+    let printContainer = document.getElementById('print-container');
+    if (!printContainer) {
+        printContainer = document.createElement('div');
+        printContainer.id = 'print-container';
+        document.body.appendChild(printContainer);
+    }
+    
+    printContainer.innerHTML = document.getElementById('reportDisplayArea').innerHTML;
+
+    setTimeout(() => {
+        window.print();
+    }, 200);
+}
+
+// Eksport do pliku Excel (.xlsx)
 function exportReportToExcel() {
     if (typeof XLSX === 'undefined') {
         alert("Błąd: Nie załadowano biblioteki Excel. Upewnij się, że dodano znacznik <script> w index.html.");
@@ -1206,7 +1208,6 @@ function exportReportToExcel() {
         vat1h = brutto1h - netto1h;
     }
 
-    // Grupowanie aktywnych dni per miesiąc
     let monthsMap = {};
     for (let dateStr in assignedData) {
         let val = assignedData[dateStr];
@@ -1224,9 +1225,9 @@ function exportReportToExcel() {
         return;
     }
 
-    // --- ARKUSZ 1: PODSUMOWANIE I UMOWA ---
+    // ARKUSZ 1: PODSUMOWANIE I UMOWA
     let summaryData = [
-        ["RAPORT ROZLICZENIA WYNAJMU SAL OŚWIATOWYCH", ""],
+        ["RAPORT ROZLICZENIA WYNAJMU SAL", ""],
         ["Data wygenerowania raportu:", new Date().toLocaleDateString('pl-PL')],
         ["", ""],
         ["PARAMETRY UMOWY I STAWKI", ""],
@@ -1239,7 +1240,7 @@ function exportReportToExcel() {
         ["", ""]
     ];
 
-    // --- ARKUSZ 2: ZESTAWIENIE MIESIĘCZNE ---
+    // ARKUSZ 2: ZESTAWIENIE MIESIĘCZNE
     let monthlyRows = [
         ["Miesiąc", "Liczba dni", "Liczba godzin [h]", "Wartość Netto [zł]", "Kwota VAT [zł]", "Wartość Brutto [zł]"]
     ];
@@ -1281,7 +1282,6 @@ function exportReportToExcel() {
     let totalHoursGlobalDecimal = sumDecimalHours(allValuesGlobal);
     let avgBrutto = sortedKeys.length > 0 ? (globalBruttoSum / sortedKeys.length) : 0;
 
-    // Wiersz podsumowania
     monthlyRows.push([
         "ŁĄCZNIE",
         totalDaysAll,
@@ -1291,7 +1291,6 @@ function exportReportToExcel() {
         parseFloat(globalBruttoSum.toFixed(2))
     ]);
 
-    // Dopisanie podsumowania do Arkusza 1
     summaryData.push(
         ["PODSUMOWANIE FINANSOWE", ""],
         ["Łączny czas wynajmu (dni):", totalDaysAll],
@@ -1300,10 +1299,10 @@ function exportReportToExcel() {
         ["Łączna kwota VAT [zł]:", parseFloat(globalVatSum.toFixed(2))],
         ["Łączna kwota Brutto [zł]:", parseFloat(globalBruttoSum.toFixed(2))],
         ["Średnia miesięczna (Brutto) [zł]:", parseFloat(avgBrutto.toFixed(2))],
-        ["Wymóg kaucji / zabezpieczenia:", avgBrutto > 2500 ? "TAK - WYMAGANE ZABEZPIECZENIE (powyżej 2500 zł brutto/m-c)" : "NIE"]
+        ["Wymóg kaucji / zabezpieczenia:", avgBrutto > 2500 ? "TAK - WYMAGANE ZABEZPIECZENIE" : "NIE"]
     );
 
-    // --- ARKUSZ 3: SZCZEGÓŁOWY HARMONOGRAM DNI ---
+    // ARKUSZ 3: HARMONOGRAM DNI
     let scheduleRows = [
         ["Lp.", "Data (RRRR-MM-DD)", "Dzień tygodnia", "Liczba godzin [h]"]
     ];
@@ -1322,14 +1321,11 @@ function exportReportToExcel() {
         ]);
     });
 
-    // Tworzenie skoroszytu XLSX
     let wb = XLSX.utils.book_new();
-
     let wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     let wsMonthly = XLSX.utils.aoa_to_sheet(monthlyRows);
     let wsSchedule = XLSX.utils.aoa_to_sheet(scheduleRows);
 
-    // Ustawienie szerokości kolumn
     wsSummary['!cols'] = [{ wch: 35 }, { wch: 45 }];
     wsMonthly['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 20 }, { wch: 16 }, { wch: 20 }];
     wsSchedule['!cols'] = [{ wch: 8 }, { wch: 20 }, { wch: 18 }, { wch: 18 }];
@@ -1338,7 +1334,41 @@ function exportReportToExcel() {
     XLSX.utils.book_append_sheet(wb, wsMonthly, "Zestawienie Miesięczne");
     XLSX.utils.book_append_sheet(wb, wsSchedule, "Harmonogram Dni");
 
-    // Zapis pliku
-    let fileName = `Rozliczenie_Wynajmu_${startContract}_${endContract}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    XLSX.writeFile(wb, `Rozliczenie_Wynajmu_${startContract}_${endContract}.xlsx`);
 }
+
+// Inicjalizacja przy ładowaniu
+window.onload = async function() {
+    let defaultData = {};
+    try {
+        const response = await fetch('cennik.json');
+        defaultData = await response.json();
+    } catch (error) {
+        console.warn("Nie udało się pobrać domyślnego pliku cennik.json.", error);
+    }
+    
+    let customCennikStr = localStorage.getItem('school_rental_custom_cennik');
+    if (customCennikStr) {
+        try {
+            let customData = JSON.parse(customCennikStr);
+            bsn2Data = customData.bsn2Data || defaultData.bsn2Data || [];
+            districtsW0 = customData.districtsW0 || defaultData.districtsW0 || {};
+            fixedHolidays = customData.fixedHolidays || defaultData.fixedHolidays || {};
+            wFactors = customData.wFactors || defaultData.wFactors || {};
+        } catch(e) {
+            bsn2Data = defaultData.bsn2Data || [];
+            districtsW0 = defaultData.districtsW0 || {};
+            fixedHolidays = defaultData.fixedHolidays || {};
+            wFactors = defaultData.wFactors || {};
+        }
+    } else {
+        bsn2Data = defaultData.bsn2Data || [];
+        districtsW0 = defaultData.districtsW0 || {};
+        fixedHolidays = defaultData.fixedHolidays || {};
+        wFactors = defaultData.wFactors || {};
+    }
+    
+    initBatchRows(); 
+    loadConfiguration();
+    renderCalendar();
+};
