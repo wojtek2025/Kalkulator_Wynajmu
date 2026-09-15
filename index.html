@@ -245,14 +245,23 @@
         </div>
 
         <!-- Zakładka 5: Podgląd Raportu i Druk -->
+        <div id="reportTab" class="tab-content">
+            <div style="max-width: 950px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #e9ecef;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="margin: 0; color: #2c3e50; font-size: 22px;">📄 Raport Finansowy i Harmonogram</h3>
+                  <div style="display: flex; gap: 10px;"></div>
+                    <button onclick="exportReportToExcel()" class="save-btn" style="width: auto; background: #28a745; padding: 10px 18px; font-size: 14px; box-shadow: 0 2px 5px rgba(40,167,69,0.3);">📊 Eksportuj do Excela (.xlsx)</button>
+                  <button onclick="triggerPrintWithRefresh()" class="save-btn" style="width: auto; background: #17a2b8; padding: 10px 22px; font-size: 15px; box-shadow: 0 2px 5px rgba(23,162,184,0.3);">🖨️ Drukuj / Pobierz PDF</button>
+               
+               </div>
+               
+                </div>
+                <!-- Kontener, w który JS wstrzykuje raport -->
+                <div id="reportDisplayArea"></div>
+            </div>
+        </div>
+
        
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-    <h3 style="margin: 0; color: #2c3e50; font-size: 22px;">📄 Raport Finansowy i Harmonogram</h3>
-    <div style="display: flex; gap: 10px;">
-        <button onclick="exportReportToExcel()" class="save-btn" style="width: auto; background: #28a745; padding: 10px 18px; font-size: 14px; box-shadow: 0 2px 5px rgba(40,167,69,0.3);">📊 Eksportuj do Excela (.xlsx)</button>
-        <button onclick="triggerPrintWithRefresh()" class="save-btn" style="width: auto; background: #17a2b8; padding: 10px 18px; font-size: 14px; box-shadow: 0 2px 5px rgba(23,162,184,0.3);">🖨️ Drukuj / Pobierz PDF</button>
-    </div>
-</div>
     </div>
 
     <div class="footer">
