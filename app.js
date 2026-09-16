@@ -275,23 +275,31 @@ function initGlobalIndicators() {
         }
     }
 }
-
 function initRateCalculatorSelects() {
     let distSelect = document.getElementById('calcDistrictSelect');
     if (!distSelect) return;
     distSelect.innerHTML = '';
+    
     for (let dist in districtsW0) {
         let opt = document.createElement('option');
         opt.value = districtsW0[dist];
         opt.text = `${dist} (W0: ${districtsW0[dist]})`;
+        
+        // Automatyczne ustawienie Mokotowa jako domyślnej dzielnicy
+        if (dist.toLowerCase().includes('mokotów')) {
+            opt.selected = true;
+        }
+        
         distSelect.appendChild(opt);
     }
+    
     let roomsCont = document.getElementById('calcRoomsContainer');
     if (roomsCont) {
         roomsCont.innerHTML = '';
         addRoomRow();
     }
 }
+
 
 function addRoomRow() {
     let container = document.getElementById('calcRoomsContainer');
