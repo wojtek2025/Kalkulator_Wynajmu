@@ -558,10 +558,19 @@ input[type="checkbox"] {
 
 
 /* --- NIEZAWODNE REGUŁY WYDRUKU DO PDF --- */
+/* --- WIDOK DWUKOLUMNOWY DLA EKRANU I PDF --- */
+.print-two-column { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.print-col-left { flex: 1; min-width: 320px; }
+.print-col-right { flex: 1.8; min-width: 450px; }
+
+/* --- DOMYŚLNIE UKRYWAMY KONTENER WYDRUKU NA EKRANIE --- */
+#print-container { display: none; }
+
+/* --- NIEZAWODNE REGUŁY WYDRUKU DO PDF (POZIOMO - 1 STRONA) --- */
 @media print {
     @page {
-        
-        margin: 10mm;
+        size: A4 landscape; /* Wymuszenie poziomej kartki! */
+        margin: 8mm; /* Wąskie marginesy, by pomieścić 12 miesięcy */
     }
 
     body {
@@ -569,15 +578,11 @@ input[type="checkbox"] {
         color: #000000 !important;
         margin: 0 !important;
         padding: 0 !important;
-        font-size: 10pt !important;
+        font-size: 9pt !important;
     }
 
-    /* 1. Całkowite ukrycie interfejsu aplikacji (bez wyjątku) */
-    .container, .footer {
-        display: none !important;
-    }
+    .container, .footer { display: none !important; }
 
-    /* 2. Odkrycie i pozycjonowanie specjalnego klona raportu */
     #print-container {
         display: block !important;
         position: relative !important;
@@ -586,67 +591,96 @@ input[type="checkbox"] {
         padding: 0 !important;
     }
 
-    /* 3. Wymuszenie druku kolorów (tła, ramki) */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
 
-    /* 4. Zabezpieczenie stylów w klonie raportu dla wydruku */
-    #print-container .report-header-box { border-bottom: 2px solid #333 !important; padding-bottom: 10px !important; margin-bottom: 20px !important; text-align: center !important; }
+    /* Struktura dwukolumnowa wymuszona w druku */
+    #print-container .print-two-column {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 15px !important;
+    }
+
+    /* Lewa kolumna: sztywna szerokość */
+   #print-container .print-col-left {
+        width: 50% !important;
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        box-sizing: border-box !important;
+    }
+
+    #print-container .print-col-right {
+        width: 50% !important;
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Lewa kolumna - stylizacja wyliczeń */
+    #print-container .report-header-box { border-bottom: 2px solid #333 !important; padding-bottom: 6px !important; margin-bottom: 12px !important; text-align: center !important; }
     
-    #print-container .report-meta-grid { display: flex !important; justify-content: space-between !important; gap: 15px !important; margin-bottom: 20px !important; }
-    #print-container .report-meta-box { border: 1px solid #aaa !important; padding: 10px !important; border-radius: 5px !important; width: 48% !important; box-sizing: border-box !important; }
+    #print-container .report-meta-grid { 
+        display: flex !important; 
+        flex-direction: column !important; /* Stackujemy boksy jeden pod drugim! */
+        gap: 8px !important; 
+        margin-bottom: 12px !important; 
+    }
+    #print-container .report-meta-box { border: 1px solid #aaa !important; padding: 6px 10px !important; border-radius: 4px !important; width: 100% !important; box-sizing: border-box !important; font-size: 8.5pt !important; line-height: 1.3 !important;}
     
-    #print-container .report-table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 20px !important; }
-    #print-container .report-table th, #print-container .report-table td { border: 1px solid #444 !important; padding: 6px !important; text-align: right !important; }
+    #print-container .report-table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 0 !important; }
+    #print-container .report-table th, #print-container .report-table td { border: 1px solid #555 !important; padding: 4px !important; text-align: right !important; font-size: 8pt !important;}
     #print-container .report-table th:first-child, #print-container .report-table td:first-child { text-align: left !important; }
-    #print-container .report-table th { background: #eee !important; font-weight: bold !important; }
+    #print-container .report-table th { background: #eee !important; font-weight: bold !important; text-align: center !important;}
     #print-container .report-total-row td { font-weight: bold !important; background: #f5f5f5 !important; }
 
-    /* Wymuszenie siatki kalendarza - dwie kolumny */
-    #print-container .calendar-print-grid {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 2% !important;
+    /* Prawa kolumna - Kalendarz (3 kolumny miesięcy x max 4 rzędy = 12 miesięcy na kartce) */
+   #print-container .calendar-print-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
     }
-
     #print-container .mini-month {
-        width: 48% !important;
+        width: 100% !important;
         box-sizing: border-box !important;
         border: 1px solid #777 !important;
-        padding: 5px !important;
-        margin-bottom: 15px !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        padding: 3px !important;
+        margin-bottom: 0 !important;
+        border-radius: 4px !important;
     }
-
-    #print-container .mini-month h4 { text-align: center !important; margin: 0 0 5px 0 !important; font-size: 10pt !important; text-transform: uppercase !important; }
-    
-    /* Wymuszenie sztywnej struktury kratek dni */
+  #print-container .mini-month h4 { 
+        text-align: center !important; 
+        margin: 0 0 2px 0 !important; 
+        font-size: 7.5pt !important; 
+        text-transform: uppercase !important; 
+    }
     #print-container .mini-grid {
         display: grid !important;
         grid-template-columns: repeat(7, 1fr) !important;
-        gap: 2px !important;
+        gap: 1px !important;
         text-align: center !important;
-        font-size: 8pt !important;
     }
 
-    #print-container .mini-day-header { font-weight: bold !important; background: #eee !important; padding: 2px !important; border: 1px solid #ddd !important; }
-    
-    #print-container .mini-cell {
+    #print-container .mini-day-header { 
+        font-weight: bold !important; 
+        background: #eee !important; 
+        padding: 1px !important; 
+        border: 1px solid #ddd !important; 
+        font-size: 5.5pt !important;
+    }
+   #print-container .mini-cell {
         border: 1px solid #ccc !important;
-        min-height: 25px !important;
+        min-height: 16px !important;
         display: flex !important;
         flex-direction: column !important;
-        justify-content: space-between !important;
+        justify-content: center !important;
         align-items: center !important;
-        padding: 2px !important;
+        padding: 0 !important;
+        font-size: 6.5pt !important;
     }
-
     #print-container .mini-cell.empty { border: none !important; }
     #print-container .mini-cell.active { background-color: #d4edda !important; border: 1px solid #28a745 !important; font-weight: bold !important; }
     #print-container .mini-cell.holiday { background-color: #fff3cd !important; border: 1px solid #ffeeba !important; color: #856404 !important; }
-
-    #print-container .page-break { page-break-before: always !important; break-before: page !important; }
 }
