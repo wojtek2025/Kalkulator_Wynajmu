@@ -36,7 +36,7 @@ function showToast(message, isError = false) {
 }
 
 // ==========================================
-// ZAKŁADKA SZYBKIE PRZYPISANIE
+// ZAKŁADKA SZYBKIE PRZYPISANIE (ZAAWANSOWANY INPUT)
 // ==========================================
 function initBatchRows() {
     const container = document.getElementById('batchRowsContainer');
@@ -56,18 +56,68 @@ function initBatchRows() {
     let html = '';
     daysData.forEach(d => {
         let isChecked = savedBatch[d.id] && savedBatch[d.id].checked ? 'checked' : '';
-        let val = savedBatch[d.id] && savedBatch[d.id].val !== undefined ? savedBatch[d.id].val : '0.0000';
+        
+        let valDec = savedBatch[d.id] && savedBatch[d.id].val !== undefined ? parseFloat(savedBatch[d.id].val) : 0;
+        if (isNaN(valDec) || valDec < 0) valDec = 0;
+        
+        let valDecStr = valDec > 0 ? valDec.toString() : '';
+        let h = Math.floor(valDec);
+        let m = Math.round((valDec - h) * 60);
+        if (m === 60) { h++; m = 0; }
+        
+        let hStr = valDec > 0 ? h.toString() : '';
+        let mStr = valDec > 0 ? m.toString() : '';
+
         html += `
-            <div class="batch-row" style="background: #fff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e9ecef;">
-                <input type="checkbox" id="chk_${d.id}" value="${d.id}" ${isChecked} onchange="saveBatchInputsState()">
-                <label for="chk_${d.id}" style="cursor: pointer; font-weight: 600; color: ${d.color || '#495057'};">${d.name}</label>
-                <input type="number" id="val_${d.id}" min="0" step="0.0001" value="${val}" style="text-align: center; font-weight: bold;" oninput="validateNonNegative(this); updateBatchPreview(${d.id}); saveBatchInputsState()">
-                <span style="color: var(--text-muted);">h</span>
-                <span id="prev_${d.id}" style="font-size: 13px; color: var(--primary); font-weight: bold; text-align: left;">(0h 00m)</span>
+            <div class="batch-row" style="background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="width: 120px; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="chk_${d.id}" value="${d.id}" ${isChecked} onchange="saveBatchInputsState()">
+                    <label for="chk_${d.id}" style="cursor: pointer; font-weight: 600; color: ${d.color || '#495057'}; margin: 0;">${d.name}</label>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 5px; flex: 1; min-width: 250px;">
+                    <input type="text" inputmode="decimal" id="val_${d.id}" value="${valDecStr}" placeholder="Ułamek" style="width: 70px; text-align: center; font-weight: bold; border: 1px solid #ced4da; border-radius: 4px; padding: 6px;" oninput="syncBatchTime(${d.id}, 'dec'); saveBatchInputsState()">
+                    <span style="font-size: 13px; color: var(--text-muted); font-weight:bold;">h</span>
+                    
+                    <span style="color:#adb5bd; font-size:11px; margin: 0 10px; font-weight:bold;">ALBO</span>
+                    
+                    <input type="number" id="val_h_${d.id}" value="${hStr}" placeholder="0" min="0" style="width: 55px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 6px;" oninput="syncBatchTime(${d.id}, 'hm'); saveBatchInputsState()"> 
+                    <span style="font-size:13px; color:#6c757d; margin-right:5px; font-weight:bold;">h</span>
+                    
+                    <input type="number" id="val_m_${d.id}" value="${mStr}" placeholder="0" min="0" max="59" style="width: 55px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 6px;" oninput="syncBatchTime(${d.id}, 'hm'); saveBatchInputsState()"> 
+                    <span style="font-size:13px; color:#6c757d; font-weight:bold;">m</span>
+                </div>
             </div>
         `;
     });
     container.innerHTML = html;
+}
+
+function syncBatchTime(id, source) {
+    let decInput = document.getElementById(`val_${id}`);
+    let hInput = document.getElementById(`val_h_${id}`);
+    let mInput = document.getElementById(`val_m_${id}`);
+    
+    if (source === 'dec') {
+        let raw = decInput.value.replace(',', '.');
+        let decVal = parseFloat(raw);
+        if (isNaN(decVal) || decVal < 0) { hInput.value = ''; mInput.value = ''; return; }
+        let h = Math.floor(decVal);
+        let m = Math.round((decVal - h) * 60);
+        if (m === 60) { h++; m = 0; }
+        hInput.value = h;
+        mInput.value = m;
+    } else {
+        let h = parseInt(hInput.value) || 0;
+        let m = parseInt(mInput.value) || 0;
+        if (h < 0) h = 0;
+        if (m < 0) m = 0;
+        if (h === 0 && m === 0 && hInput.value === '' && mInput.value === '') {
+            decInput.value = ''; return;
+        }
+        let decVal = h + (m / 60);
+        decInput.value = (Math.round(decVal * 10000) / 10000).toString();
+    }
 }
 
 function saveBatchInputsState() {
@@ -76,7 +126,8 @@ function saveBatchInputsState() {
         let chk = document.getElementById(`chk_${i}`);
         let valInput = document.getElementById(`val_${i}`);
         if (chk && valInput) {
-            let val = parseFloat(valInput.value);
+            let raw = valInput.value.replace(',', '.');
+            let val = parseFloat(raw);
             if (isNaN(val) || val < 0) val = 0;
             val = Math.round(val * 10000) / 10000;
             batchState[i] = { checked: chk.checked, val: val };
@@ -101,7 +152,9 @@ function applyBatchAssignment() {
     for (let i = 0; i <= 6; i++) {
         let chk = document.getElementById(`chk_${i}`);
         if (chk && chk.checked) {
-            let val = parseFloat(document.getElementById(`val_${i}`).value);
+            let valInput = document.getElementById(`val_${i}`);
+            let raw = valInput.value.replace(',', '.');
+            let val = parseFloat(raw);
             if (isNaN(val) || val < 0) val = 0;
             val = Math.round(val * 10000) / 10000;
             activeDays[i] = val;
@@ -148,14 +201,64 @@ function applyBatchAssignment() {
     showToast(`✅ Zaktualizowano! Uzupełniono harmonogram dla ${countAssigned} dni.`);
 }
 
-function updateBatchPreview(dayId) {
-    let val = parseFloat(document.getElementById(`val_${dayId}`).value) || 0;
-    if (val < 0) val = 0;
-    document.getElementById(`prev_${dayId}`).innerText = `(${formatDecimalToHoursAndMinutes(val)})`;
+// ==========================================
+// POLE MANUALNE POD KALENDARZEM (DYNAMICZNY UPGRADE)
+// ==========================================
+function upgradeManualTimeInput() {
+    let oldInput = document.getElementById('hoursInput');
+    if (!oldInput || oldInput.dataset.upgraded) return;
+    
+    let container = document.createElement('div');
+    container.style.display = 'inline-flex';
+    container.style.alignItems = 'center';
+    container.style.gap = '8px';
+    container.style.flexWrap = 'wrap';
+    container.style.justifyContent = 'center';
+
+    container.innerHTML = `
+        <div style="display:flex; align-items:center; gap:5px; margin-right:10px;">
+            <input type="text" id="hoursInput" data-upgraded="true" inputmode="decimal" placeholder="Ułamek" style="width: 75px; text-align:center; font-weight:bold; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime('dec')">
+            <span style="font-weight:bold; color:#6c757d;">h</span>
+        </div>
+        <span style="color:#adb5bd; font-size:12px; font-weight:bold;">ALBO</span>
+        <div style="display:flex; align-items:center; gap:5px; margin-left:10px;">
+            <input type="number" id="manual_h" placeholder="0" min="0" style="width: 55px; text-align:center; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime('hm')"> 
+            <span style="font-size:13px; color:#6c757d; font-weight:bold;">h</span>
+            <input type="number" id="manual_m" placeholder="0" min="0" max="59" style="width: 55px; text-align:center; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime('hm')"> 
+            <span style="font-size:13px; color:#6c757d; font-weight:bold;">m</span>
+        </div>
+    `;
+    oldInput.replaceWith(container);
+    
+    // Ukrywamy stary tekstowy podgląd (bo nowy input mówi sam za siebie)
+    let prevEl = document.getElementById('timePreview');
+    if (prevEl) prevEl.style.display = 'none';
 }
 
-function initBatchPreviews() {
-    for (let i = 0; i <= 6; i++) updateBatchPreview(i);
+function syncManualTime(source) {
+    let decInput = document.getElementById('hoursInput');
+    let hInput = document.getElementById('manual_h');
+    let mInput = document.getElementById('manual_m');
+    if(!decInput || !hInput || !mInput) return;
+
+    if (source === 'dec') {
+        let raw = decInput.value.replace(',', '.');
+        let decVal = parseFloat(raw);
+        if (isNaN(decVal) || decVal < 0) { hInput.value = ''; mInput.value = ''; return; }
+        let h = Math.floor(decVal);
+        let m = Math.round((decVal - h) * 60);
+        if(m === 60) { h++; m = 0; }
+        hInput.value = h;
+        mInput.value = m;
+    } else {
+        let h = parseInt(hInput.value) || 0;
+        let m = parseInt(mInput.value) || 0;
+        if (h < 0) h = 0;
+        if (m < 0) m = 0;
+        if (h === 0 && m === 0 && hInput.value === '' && mInput.value === '') { decInput.value = ''; return; }
+        let decVal = h + (m / 60);
+        decInput.value = (Math.round(decVal * 10000) / 10000).toString();
+    }
 }
 
 // ==========================================
@@ -530,13 +633,14 @@ function formatDecimalToHoursAndMinutes(val) {
     return `${hours}h ${totalMinutes < 10 ? '0' : ''}${totalMinutes}m`;
 }
 
+function formatHoursDisp(val) {
+    let num = parseFloat(val);
+    if (isNaN(num)) return "0.00";
+    return num.toFixed(2);
+}
+
 function updateTimePreview() {
-    let inputEl = document.getElementById('hoursInput');
-    if (!inputEl) return;
-    let val = parseFloat(inputEl.value);
-    if (isNaN(val) || val < 0) val = 0;
-    let prevEl = document.getElementById('timePreview');
-    if (prevEl) prevEl.innerText = `(${formatDecimalToHoursAndMinutes(val)})`;
+    // Zachowana funkcja by nie generować błędu braku odniesienia
 }
 
 function changeMonth(direction) {
@@ -605,7 +709,7 @@ function renderCalendar() {
             hoursDiv.className = 'day-hours';
             if (assignedData[dateStr] > 0) {
                 let val = assignedData[dateStr];
-                hoursDiv.innerHTML = `${val}h<br><span style="font-weight:normal;font-size:10px;">(${formatDecimalToHoursAndMinutes(val)})</span>`;
+                hoursDiv.innerHTML = `${formatHoursDisp(val)}h<br><span style="font-weight:normal;font-size:10px;">(${formatDecimalToHoursAndMinutes(val)})</span>`;
             }
             cell.appendChild(hoursDiv);
         }
@@ -626,13 +730,14 @@ function renderCalendar() {
         grid.appendChild(cell);
     }
     updateSummaryTable();
-    updateTimePreview();
 }
 
 function assignHours() {
     let hoursInputEl = document.getElementById('hoursInput');
-    let hours = parseFloat(hoursInputEl.value);
-    if (isNaN(hours) || hours < 0) { hours = 0; hoursInputEl.value = 0; }
+    if (!hoursInputEl) return;
+    let raw = hoursInputEl.value.replace(',', '.');
+    let hours = parseFloat(raw);
+    if (isNaN(hours) || hours < 0) { hours = 0; hoursInputEl.value = ''; }
     hours = Math.round(hours * 10000) / 10000;
 
     let startContract = document.getElementById('contractStart').value;
@@ -680,9 +785,12 @@ function clearEntireCalendar() {
         for (let i = 0; i <= 6; i++) {
             let chk = document.getElementById(`chk_${i}`);
             let valInput = document.getElementById(`val_${i}`);
+            let hInput = document.getElementById(`val_h_${i}`);
+            let mInput = document.getElementById(`val_m_${i}`);
             if (chk) chk.checked = false;
-            if (valInput) valInput.value = "0.0000";
-            updateBatchPreview(i);
+            if (valInput) valInput.value = "";
+            if (hInput) hInput.value = "";
+            if (mInput) mInput.value = "";
         }
 
         let distEl = document.getElementById('calcDistrictSelect');
@@ -793,19 +901,19 @@ function updateSummaryTable() {
         globalBruttoSum += fin.brutto;
 
         let row = document.createElement('tr');
-        row.innerHTML = `<td>${monthLabel}</td><td>${daysCount}</td><td><b style="color:var(--primary);">${hoursSumDecimal}</b></td><td>${formatCurrency(fin.netto)}</td><td>${formatCurrency(fin.vat)}</td><td><b style="color:#2c3e50;">${formatCurrency(fin.brutto)}</b></td>`;
+        row.innerHTML = `<td>${monthLabel}</td><td>${daysCount}</td><td><b style="color:var(--primary);">${formatHoursDisp(hoursSumDecimal)}h</b></td><td>${formatCurrency(fin.netto)}</td><td>${formatCurrency(fin.vat)}</td><td><b style="color:#2c3e50;">${formatCurrency(fin.brutto)}</b></td>`;
         tbody.appendChild(row);
     });
 
     let totalHoursGlobalDecimal = sumDecimalHours(allValuesGlobal);
     let totalRow = document.createElement('tr');
     totalRow.className = 'total-row';
-    totalRow.innerHTML = `<td>Łącznie</td><td>${totalDaysAll}</td><td><b style="color:var(--primary);">${totalHoursGlobalDecimal}</b></td><td>${formatCurrency(globalNettoSum)}</td><td>${formatCurrency(globalVatSum)}</td><td><b style="color:var(--success); font-size:15px;">${formatCurrency(globalBruttoSum)}</b></td>`;
+    totalRow.innerHTML = `<td>Łącznie</td><td>${totalDaysAll}</td><td><b style="color:var(--primary);">${formatHoursDisp(totalHoursGlobalDecimal)}h</b></td><td>${formatCurrency(globalNettoSum)}</td><td>${formatCurrency(globalVatSum)}</td><td><b style="color:var(--success); font-size:15px;">${formatCurrency(globalBruttoSum)}</b></td>`;
     tbody.appendChild(totalRow);
 
     let avgBrutto = sortedKeys.length > 0 ? (globalBruttoSum / sortedKeys.length) : 0;
 
-    document.getElementById('statTotalDaysHours').innerHTML = `<b>${totalDaysAll}</b> dni / <b style="color:#f1c40f;">${totalHoursGlobalDecimal}h</b>`;
+    document.getElementById('statTotalDaysHours').innerHTML = `<b>${totalDaysAll}</b> dni / <b style="color:#f1c40f;">${formatHoursDisp(totalHoursGlobalDecimal)}h</b>`;
     document.getElementById('statTotalNetto').innerText = formatCurrency(globalNettoSum);
     document.getElementById('statTotalVat').innerText = formatCurrency(globalVatSum);
     document.getElementById('statTotalBrutto').innerText = formatCurrency(globalBruttoSum);
@@ -1012,7 +1120,6 @@ function loadConfiguration() {
         customHolidays = { "2024-12-31": "np. Dzień wolny od zajęć dydaktycznych" };
     }
     updateHolidaysTextarea();
-    initBatchPreviews();
 }
 
 window.onload = async function() {
@@ -1045,13 +1152,14 @@ window.onload = async function() {
         wFactors = defaultData.wFactors || {};
     }
     
+    upgradeManualTimeInput(); // Zamienia pole godzin pod kalendarzem na wersję z wyborem h/m
     initBatchRows(); 
     loadConfiguration();
     renderCalendar();
 };
 
 // ==========================================
-// MOSTEK GLOBALNY WINDOW
+// MOSTEK GLOBALNY WINDOW DLA OBFUSKACJI
 // ==========================================
 window.showToast = showToast;
 window.applyBatchAssignment = applyBatchAssignment;
@@ -1083,3 +1191,6 @@ window.exportCennikJson = exportCennikJson;
 window.resetCennikToDefault = resetCennikToDefault;
 window.onContractDatesChange = onContractDatesChange;
 window.validateNonNegative = validateNonNegative;
+window.formatHoursDisp = formatHoursDisp;
+window.syncBatchTime = syncBatchTime;
+window.syncManualTime = syncManualTime;
