@@ -36,7 +36,7 @@ function showToast(message, isError = false) {
 }
 
 // ==========================================
-// ZAKŁADKA SZYBKIE PRZYPISANIE (ZAAWANSOWANY INPUT)
+// ZAKŁADKA SZYBKIE PRZYPISANIE (TYLKO GODZINY I MINUTY)
 // ==========================================
 function initBatchRows() {
     const container = document.getElementById('batchRowsContainer');
@@ -60,32 +60,31 @@ function initBatchRows() {
         let valDec = savedBatch[d.id] && savedBatch[d.id].val !== undefined ? parseFloat(savedBatch[d.id].val) : 0;
         if (isNaN(valDec) || valDec < 0) valDec = 0;
         
-        let valDecStr = valDec > 0 ? valDec.toString() : '';
         let h = Math.floor(valDec);
         let m = Math.round((valDec - h) * 60);
         if (m === 60) { h++; m = 0; }
         
         let hStr = valDec > 0 ? h.toString() : '';
         let mStr = valDec > 0 ? m.toString() : '';
+        let decStr = valDec > 0 ? valDec.toFixed(4) : '0.0000';
 
         html += `
-            <div class="batch-row" style="background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div style="width: 120px; display: flex; align-items: center; gap: 8px;">
+            <div class="batch-row" style="background: #fff; padding: 10px 15px; border-radius: 6px; border: 1px solid #e9ecef; display: flex; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div style="width: 140px; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="chk_${d.id}" value="${d.id}" ${isChecked} onchange="saveBatchInputsState()">
                     <label for="chk_${d.id}" style="cursor: pointer; font-weight: 600; color: ${d.color || '#495057'}; margin: 0;">${d.name}</label>
                 </div>
                 
-                <div style="display: flex; align-items: center; gap: 5px; flex: 1; min-width: 250px;">
-                    <input type="text" inputmode="decimal" id="val_${d.id}" value="${valDecStr}" placeholder="Ułamek" style="width: 70px; text-align: center; font-weight: bold; border: 1px solid #ced4da; border-radius: 4px; padding: 6px;" oninput="syncBatchTime(${d.id}, 'dec'); saveBatchInputsState()">
-                    <span style="font-size: 13px; color: var(--text-muted); font-weight:bold;">h</span>
+                <div style="display: flex; align-items: center; gap: 5px; flex: 1;">
+                    <input type="number" id="val_h_${d.id}" value="${hStr}" placeholder="0" min="0" style="width: 60px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 6px; font-weight:bold;" oninput="syncBatchTime(${d.id}); saveBatchInputsState()"> 
+                    <span style="font-size:14px; color:#6c757d; margin-right:10px; font-weight:bold;">h</span>
                     
-                    <span style="color:#adb5bd; font-size:11px; margin: 0 10px; font-weight:bold;">ALBO</span>
+                    <input type="number" id="val_m_${d.id}" value="${mStr}" placeholder="0" min="0" max="59" style="width: 60px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 6px; font-weight:bold;" oninput="syncBatchTime(${d.id}); saveBatchInputsState()"> 
+                    <span style="font-size:14px; color:#6c757d; font-weight:bold;">m</span>
                     
-                    <input type="number" id="val_h_${d.id}" value="${hStr}" placeholder="0" min="0" style="width: 55px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 6px;" oninput="syncBatchTime(${d.id}, 'hm'); saveBatchInputsState()"> 
-                    <span style="font-size:13px; color:#6c757d; margin-right:5px; font-weight:bold;">h</span>
+                    <span style="color:#adb5bd; font-size:13px; margin: 0 10px 0 15px; font-weight:bold;">=</span>
                     
-                    <input type="number" id="val_m_${d.id}" value="${mStr}" placeholder="0" min="0" max="59" style="width: 55px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; padding: 6px;" oninput="syncBatchTime(${d.id}, 'hm'); saveBatchInputsState()"> 
-                    <span style="font-size:13px; color:#6c757d; font-weight:bold;">m</span>
+                    <span id="disp_dec_${d.id}" style="color: var(--primary); font-weight: 800; font-size: 15px;">${decStr} h</span>
                 </div>
             </div>
         `;
@@ -93,30 +92,24 @@ function initBatchRows() {
     container.innerHTML = html;
 }
 
-function syncBatchTime(id, source) {
-    let decInput = document.getElementById(`val_${id}`);
+function syncBatchTime(id) {
     let hInput = document.getElementById(`val_h_${id}`);
     let mInput = document.getElementById(`val_m_${id}`);
+    let disp = document.getElementById(`disp_dec_${id}`);
+    if(!hInput || !mInput || !disp) return;
+
+    let h = parseInt(hInput.value) || 0;
+    let m = parseInt(mInput.value) || 0;
+    if (h < 0) h = 0;
+    if (m < 0) m = 0;
     
-    if (source === 'dec') {
-        let raw = decInput.value.replace(',', '.');
-        let decVal = parseFloat(raw);
-        if (isNaN(decVal) || decVal < 0) { hInput.value = ''; mInput.value = ''; return; }
-        let h = Math.floor(decVal);
-        let m = Math.round((decVal - h) * 60);
-        if (m === 60) { h++; m = 0; }
-        hInput.value = h;
-        mInput.value = m;
+    let decVal = h + (m / 60);
+    let finalDec = Math.round(decVal * 10000) / 10000;
+    
+    if (h === 0 && m === 0 && hInput.value === '' && mInput.value === '') {
+        disp.innerText = '0.0000 h';
     } else {
-        let h = parseInt(hInput.value) || 0;
-        let m = parseInt(mInput.value) || 0;
-        if (h < 0) h = 0;
-        if (m < 0) m = 0;
-        if (h === 0 && m === 0 && hInput.value === '' && mInput.value === '') {
-            decInput.value = ''; return;
-        }
-        let decVal = h + (m / 60);
-        decInput.value = (Math.round(decVal * 10000) / 10000).toString();
+        disp.innerText = finalDec.toFixed(4) + ' h';
     }
 }
 
@@ -124,12 +117,14 @@ function saveBatchInputsState() {
     let batchState = {};
     for (let i = 0; i <= 6; i++) {
         let chk = document.getElementById(`chk_${i}`);
-        let valInput = document.getElementById(`val_${i}`);
-        if (chk && valInput) {
-            let raw = valInput.value.replace(',', '.');
-            let val = parseFloat(raw);
-            if (isNaN(val) || val < 0) val = 0;
-            val = Math.round(val * 10000) / 10000;
+        let hInput = document.getElementById(`val_h_${i}`);
+        let mInput = document.getElementById(`val_m_${i}`);
+        
+        if (chk && hInput && mInput) {
+            let h = parseInt(hInput.value) || 0;
+            let m = parseInt(mInput.value) || 0;
+            let decVal = h + (m / 60);
+            let val = Math.round(decVal * 10000) / 10000;
             batchState[i] = { checked: chk.checked, val: val };
         }
     }
@@ -152,11 +147,10 @@ function applyBatchAssignment() {
     for (let i = 0; i <= 6; i++) {
         let chk = document.getElementById(`chk_${i}`);
         if (chk && chk.checked) {
-            let valInput = document.getElementById(`val_${i}`);
-            let raw = valInput.value.replace(',', '.');
-            let val = parseFloat(raw);
-            if (isNaN(val) || val < 0) val = 0;
-            val = Math.round(val * 10000) / 10000;
+            let h = parseInt(document.getElementById(`val_h_${i}`).value) || 0;
+            let m = parseInt(document.getElementById(`val_m_${i}`).value) || 0;
+            let decVal = h + (m / 60);
+            let val = Math.round(decVal * 10000) / 10000;
             activeDays[i] = val;
         }
     }
@@ -202,7 +196,7 @@ function applyBatchAssignment() {
 }
 
 // ==========================================
-// POLE MANUALNE POD KALENDARZEM (DYNAMICZNY UPGRADE)
+// POLE MANUALNE POD KALENDARZEM
 // ==========================================
 function upgradeManualTimeInput() {
     let oldInput = document.getElementById('hoursInput');
@@ -216,48 +210,47 @@ function upgradeManualTimeInput() {
     container.style.justifyContent = 'center';
 
     container.innerHTML = `
-        <div style="display:flex; align-items:center; gap:5px; margin-right:10px;">
-            <input type="text" id="hoursInput" data-upgraded="true" inputmode="decimal" placeholder="Ułamek" style="width: 75px; text-align:center; font-weight:bold; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime('dec')">
-            <span style="font-weight:bold; color:#6c757d;">h</span>
-        </div>
-        <span style="color:#adb5bd; font-size:12px; font-weight:bold;">ALBO</span>
         <div style="display:flex; align-items:center; gap:5px; margin-left:10px;">
-            <input type="number" id="manual_h" placeholder="0" min="0" style="width: 55px; text-align:center; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime('hm')"> 
-            <span style="font-size:13px; color:#6c757d; font-weight:bold;">h</span>
-            <input type="number" id="manual_m" placeholder="0" min="0" max="59" style="width: 55px; text-align:center; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime('hm')"> 
-            <span style="font-size:13px; color:#6c757d; font-weight:bold;">m</span>
+            <input type="number" id="manual_h" placeholder="0" min="0" style="width: 60px; text-align:center; font-weight:bold; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime()"> 
+            <span style="font-size:14px; color:#6c757d; font-weight:bold;">h</span>
+            
+            <input type="number" id="manual_m" placeholder="0" min="0" max="59" style="width: 60px; text-align:center; font-weight:bold; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" oninput="syncManualTime()"> 
+            <span style="font-size:14px; color:#6c757d; font-weight:bold;">m</span>
+            
+            <span style="color:#adb5bd; font-size:14px; font-weight:bold; margin:0 10px;">=</span>
+            
+            <span id="manual_disp_dec" style="color:var(--primary); font-weight:800; font-size:16px;">0.0000 h</span>
+            <input type="hidden" id="hoursInput" data-upgraded="true" value="0">
         </div>
     `;
     oldInput.replaceWith(container);
     
-    // Ukrywamy stary tekstowy podgląd (bo nowy input mówi sam za siebie)
+    // Ukrywamy stary, niepotrzebny podgląd z HTML
     let prevEl = document.getElementById('timePreview');
     if (prevEl) prevEl.style.display = 'none';
 }
 
-function syncManualTime(source) {
-    let decInput = document.getElementById('hoursInput');
+function syncManualTime() {
     let hInput = document.getElementById('manual_h');
     let mInput = document.getElementById('manual_m');
-    if(!decInput || !hInput || !mInput) return;
+    let hiddenDec = document.getElementById('hoursInput');
+    let dispDec = document.getElementById('manual_disp_dec');
+    if(!hInput || !mInput || !hiddenDec || !dispDec) return;
 
-    if (source === 'dec') {
-        let raw = decInput.value.replace(',', '.');
-        let decVal = parseFloat(raw);
-        if (isNaN(decVal) || decVal < 0) { hInput.value = ''; mInput.value = ''; return; }
-        let h = Math.floor(decVal);
-        let m = Math.round((decVal - h) * 60);
-        if(m === 60) { h++; m = 0; }
-        hInput.value = h;
-        mInput.value = m;
+    let h = parseInt(hInput.value) || 0;
+    let m = parseInt(mInput.value) || 0;
+    if (h < 0) h = 0;
+    if (m < 0) m = 0;
+    
+    let decVal = h + (m / 60);
+    let finalDec = Math.round(decVal * 10000) / 10000;
+    
+    hiddenDec.value = finalDec;
+
+    if (h === 0 && m === 0 && hInput.value === '' && mInput.value === '') { 
+        dispDec.innerText = '0.0000 h';
     } else {
-        let h = parseInt(hInput.value) || 0;
-        let m = parseInt(mInput.value) || 0;
-        if (h < 0) h = 0;
-        if (m < 0) m = 0;
-        if (h === 0 && m === 0 && hInput.value === '' && mInput.value === '') { decInput.value = ''; return; }
-        let decVal = h + (m / 60);
-        decInput.value = (Math.round(decVal * 10000) / 10000).toString();
+        dispDec.innerText = finalDec.toFixed(4) + ' h';
     }
 }
 
@@ -280,20 +273,16 @@ function initRateCalculatorSelects() {
     let distSelect = document.getElementById('calcDistrictSelect');
     if (!distSelect) return;
     distSelect.innerHTML = '';
-    
     for (let dist in districtsW0) {
         let opt = document.createElement('option');
         opt.value = districtsW0[dist];
         opt.text = `${dist} (W0: ${districtsW0[dist]})`;
         
-        // Automatyczne ustawienie Mokotowa jako domyślnej dzielnicy
         if (dist.toLowerCase().includes('mokotów')) {
             opt.selected = true;
         }
-        
         distSelect.appendChild(opt);
     }
-    
     let roomsCont = document.getElementById('calcRoomsContainer');
     if (roomsCont) {
         roomsCont.innerHTML = '';
@@ -647,10 +636,6 @@ function formatHoursDisp(val) {
     return num.toFixed(2);
 }
 
-function updateTimePreview() {
-    // Zachowana funkcja by nie generować błędu braku odniesienia
-}
-
 function changeMonth(direction) {
     currentMonth += direction;
     if (currentMonth > 11) { currentMonth = 0; currentYear++; }
@@ -743,9 +728,10 @@ function renderCalendar() {
 function assignHours() {
     let hoursInputEl = document.getElementById('hoursInput');
     if (!hoursInputEl) return;
-    let raw = hoursInputEl.value.replace(',', '.');
-    let hours = parseFloat(raw);
-    if (isNaN(hours) || hours < 0) { hours = 0; hoursInputEl.value = ''; }
+    let hours = parseFloat(hoursInputEl.value);
+    if (isNaN(hours) || hours < 0) { hours = 0; }
+    
+    // Zabezpieczenie dokładności 4 miejsc
     hours = Math.round(hours * 10000) / 10000;
 
     let startContract = document.getElementById('contractStart').value;
@@ -792,14 +778,24 @@ function clearEntireCalendar() {
 
         for (let i = 0; i <= 6; i++) {
             let chk = document.getElementById(`chk_${i}`);
-            let valInput = document.getElementById(`val_${i}`);
             let hInput = document.getElementById(`val_h_${i}`);
             let mInput = document.getElementById(`val_m_${i}`);
+            let disp = document.getElementById(`disp_dec_${i}`);
+            
             if (chk) chk.checked = false;
-            if (valInput) valInput.value = "";
             if (hInput) hInput.value = "";
             if (mInput) mInput.value = "";
+            if (disp) disp.innerText = "0.0000 h";
         }
+
+        let mH = document.getElementById('manual_h');
+        let mM = document.getElementById('manual_m');
+        let mDisp = document.getElementById('manual_disp_dec');
+        let hInput = document.getElementById('hoursInput');
+        if (mH) mH.value = "";
+        if (mM) mM.value = "";
+        if (mDisp) mDisp.innerText = "0.0000 h";
+        if (hInput) hInput.value = "0";
 
         let distEl = document.getElementById('calcDistrictSelect');
         if (distEl) distEl.selectedIndex = 0;
@@ -817,7 +813,7 @@ function clearEntireCalendar() {
     }
 }
 
-// Precyzyjne sumowanie godzin z obsługą do 4 miejsc po przecinku
+// Precyzyjne sumowanie godzin z obsługą do 4 miejsc po przecinku w logice matematycznej
 function sumDecimalHours(hoursArray) {
     let sum = hoursArray.reduce((acc, curr) => acc + (parseFloat(curr) || 0), 0);
     return parseFloat(sum.toFixed(4));
@@ -1160,7 +1156,7 @@ window.onload = async function() {
         wFactors = defaultData.wFactors || {};
     }
     
-    upgradeManualTimeInput(); // Zamienia pole godzin pod kalendarzem na wersję z wyborem h/m
+    upgradeManualTimeInput(); 
     initBatchRows(); 
     loadConfiguration();
     renderCalendar();
@@ -1172,7 +1168,8 @@ window.onload = async function() {
 window.showToast = showToast;
 window.applyBatchAssignment = applyBatchAssignment;
 window.saveBatchInputsState = saveBatchInputsState;
-window.updateBatchPreview = updateBatchPreview;
+window.syncBatchTime = syncBatchTime;
+window.syncManualTime = syncManualTime;
 window.addRoomRow = addRoomRow;
 window.removeRoomRow = removeRoomRow;
 window.updateSuggestedRate = updateSuggestedRate;
@@ -1200,5 +1197,3 @@ window.resetCennikToDefault = resetCennikToDefault;
 window.onContractDatesChange = onContractDatesChange;
 window.validateNonNegative = validateNonNegative;
 window.formatHoursDisp = formatHoursDisp;
-window.syncBatchTime = syncBatchTime;
-window.syncManualTime = syncManualTime;
