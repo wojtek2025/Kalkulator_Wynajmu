@@ -159,7 +159,7 @@
                                 </div>
                             </div>
 
-                            <div class="threshold-alert" v-if="globalSummary.avgBrutto > 2500">
+                          <div class="threshold-alert" v-show="globalSummary.avgBrutto > 2500" style="display: none;" :style="{ display: globalSummary.avgBrutto > 2500 ? 'block' : 'none' }">
                                 ⚠️ Uwaga: Średnia miesięczna kwota brutto przekracza 2 500,00 zł! <br>
                                 <span style="color: #dc3545; text-transform: uppercase; font-size: 15px; margin-top: 5px; display: inline-block;">Wymagane zabezpieczenie</span>
                             </div>

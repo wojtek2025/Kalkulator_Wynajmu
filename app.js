@@ -129,14 +129,23 @@ validateBatchHours(day) {
             if (day.m > 59) day.m = 59;
             this.saveBatchState();
         },
-        globalSummary() {
+       globalSummary() {
             let tDays = 0, tHours = 0, tNetto = 0, tVat = 0, tBrutto = 0;
             this.summaryData.forEach(r => {
                 tDays += r.daysCount; tHours += r.hoursSum; tNetto += r.fin.netto; tVat += r.fin.vat; tBrutto += r.fin.brutto;
             });
-            return { totalDays: tDays, totalHours: parseFloat(tHours.toFixed(4)), totalNetto: tNetto, totalVat: tVat, totalBrutto: tBrutto, avgBrutto: this.summaryData.length > 0 ? (tBrutto / this.summaryData.length) : 0 };
+            let numMonths = this.summaryData.length;
+            let avg = numMonths > 0 ? (tBrutto / numMonths) : 0;
+            
+            return { 
+                totalDays: tDays, 
+                totalHours: parseFloat(tHours.toFixed(4)), 
+                totalNetto: tNetto, 
+                totalVat: tVat, 
+                totalBrutto: tBrutto, 
+                avgBrutto: parseFloat(avg.toFixed(2)) 
+            };
         },
-
         rateInfoHtml() {
             let n1h = this.rateNetto || 0;
             let v1h = Math.round(n1h * (this.vatRate / 100) * 100) / 100;
