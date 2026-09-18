@@ -314,7 +314,7 @@ const app = createApp({
             if (this.manualM > 59) this.manualM = 59;
         },
 
-        applyBatchAssignment() {
+       applyBatchAssignment() {
             if (!this.contractStart || !this.contractEnd) { 
                 this.showToast("⚠️ Najpierw ustaw daty trwania umowy w Konfiguracji!", true); 
                 this.activeTab = 'config'; 
@@ -327,20 +327,19 @@ const app = createApp({
                 return; 
             }
             
-            // Poprawka dla czasu UTC/Lokalnego - wymusza bezpieczny odczyt początku umowy
-            let curr = new Date(this.contractStart + 'T00:00:00'); 
+            // Trik rozwiązujący problem stref czasowych i zmiany czasu letni/zimowy:
+            // Ustawiamy godzinę 12:00 (południe). Dzięki temu dodanie 1 dnia zawsze 
+            // trafi bezpiecznie w środek kolejnego dnia, bez gubienia ostatniej daty!
+            let curr = new Date(this.contractStart + 'T12:00:00'); 
+            let end = new Date(this.contractEnd + 'T12:00:00');
             let addedCount = 0;
             
-            // Pętla while(true) z bezpiecznym przerwaniem (break) po przekroczeniu daty końcowej
-            while (true) {
+            while (curr <= end) {
                 let y = curr.getFullYear();
                 let m = String(curr.getMonth() + 1).padStart(2, '0');
                 let d = String(curr.getDate()).padStart(2, '0');
                 let dStr = `${y}-${m}-${d}`;
                 
-                // Bezbłędne sprawdzanie stringów: ostatni dzień się załapie!
-                if (dStr > this.contractEnd) break; 
-
                 let mdStr = `${m}-${d}`;
                 let dayOfW = curr.getDay();
                 
@@ -352,7 +351,8 @@ const app = createApp({
                         delete this.assignedData[dStr];
                     }
                 }
-                curr.setDate(curr.getDate() + 1); // Zawsze +1 dzień
+                // Bezpieczne przesunięcie o 1 dzień
+                curr.setDate(curr.getDate() + 1); 
             }
             this.saveCalendarData();
             this.activeTab = 'calc';
