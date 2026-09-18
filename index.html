@@ -217,7 +217,7 @@
                             </div>
                             <div class="config-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
                                 <label>Data do (koniec):</label>
-                                <input type="date" v-model="calcContractEnd" style="font-weight: bold; color: var(--primary); background: #fff;">
+                                <input type="date" v-model="calcContractEnd" :min="calcContractStart" style="font-weight: bold; color: var(--primary); background: #fff;">
                             </div>
                         </div>
                         <div style="font-size: 12px; color: #495057; margin-top: 8px; font-weight: 600;" v-html="contractDurationNotice"></div>
@@ -283,9 +283,9 @@
                                     <label>Data od (początek):</label>
                                     <input type="date" v-model="contractStart" style="font-weight: bold; color: var(--primary);">
                                 </div>
-                                <div class="config-group">
+                               <div class="config-group">
                                     <label>Data do (koniec):</label>
-                                    <input type="date" v-model="contractEnd" style="font-weight: bold; color: var(--primary);">
+                                    <input type="date" v-model="contractEnd" :min="contractStart" style="font-weight: bold; color: var(--primary);">
                                 </div>
                             </div>
 

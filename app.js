@@ -80,6 +80,7 @@ const app = createApp({
                 let mdStr = `${mm}-${dd}`;
                 
                 let holidayName = this.customHolidays[dateStr] || this.fixedHolidays[mdStr] || null;
+                // Poprawione bezpieczne porównywanie ciągów tekstowych daty
                 let isOutOfRange = (this.contractStart && dateStr < this.contractStart) || (this.contractEnd && dateStr > this.contractEnd);
                 
                 days.push({ day: day, dateStr: dateStr, isSunday: isSunday, isHoliday: holidayName !== null, holidayName: holidayName, isOutOfRange: isOutOfRange, hours: this.assignedData[dateStr] || 0 });
@@ -117,19 +118,7 @@ const app = createApp({
             });
             return rows;
         },
-validateBatchHours(day) {
-            if (day.h === '' || isNaN(day.h)) return;
-            if (day.h < 0) day.h = 0;
-            if (day.h > 24) day.h = 24;
-            this.saveBatchState();
-        },
-        validateBatchMinutes(day) {
-            if (day.m === '' || isNaN(day.m)) return;
-            if (day.m < 0) day.m = 0;
-            if (day.m > 59) day.m = 59;
-            this.saveBatchState();
-        },
-       globalSummary() {
+        globalSummary() {
             let tDays = 0, tHours = 0, tNetto = 0, tVat = 0, tBrutto = 0;
             this.summaryData.forEach(r => {
                 tDays += r.daysCount; tHours += r.hoursSum; tNetto += r.fin.netto; tVat += r.fin.vat; tBrutto += r.fin.brutto;
@@ -158,19 +147,6 @@ validateBatchHours(day) {
             for (let id in this.wFactors) { if (id >= 2) globals[id] = this.wFactors[id]; }
             return globals;
         },
-        
-validateManualHours() {
-            if (this.manualH === '' || isNaN(this.manualH)) return;
-            if (this.manualH < 0) this.manualH = 0;
-            if (this.manualH > 24) this.manualH = 24;
-        },
-        validateManualMinutes() {
-            if (this.manualM === '' || isNaN(this.manualM)) return;
-            if (this.manualM < 0) this.manualM = 0;
-            if (this.manualM > 59) this.manualM = 59;
-        },
-
-
 
         totalSuggestedRate() {
             let w0 = parseFloat(this.districtsW0[this.selectedDistrictKey]) || 1.0;
@@ -202,10 +178,22 @@ validateManualHours() {
         }
     },
 
-    // ===============================================
+   // ===============================================
     // OBSERWATORZY (WATCHERS) 
     // ===============================================
     watch: {
+        // Zabezpieczenie Zakładki 4: Przesuwa datę końcową, jeśli początkowa ją wyprzedzi
+        contractStart(newVal) {
+            if (newVal && this.contractEnd && newVal > this.contractEnd) {
+                this.contractEnd = newVal;
+            }
+        },
+        // Zabezpieczenie Zakładki 3: Przesuwa datę końcową, jeśli początkowa ją wyprzedzi
+        calcContractStart(newVal) {
+            if (newVal && this.calcContractEnd && newVal > this.calcContractEnd) {
+                this.calcContractEnd = newVal;
+            }
+        },
         activeTab(newTab) {
             if (newTab === 'report') {
                 setTimeout(() => { 
@@ -286,7 +274,7 @@ validateManualHours() {
         },
         saveCalendarData() { localStorage.setItem('school_rental_assigned_data', JSON.stringify(this.assignedData)); },
 
-      getBatchDecimal(dayObj) {
+        getBatchDecimal(dayObj) {
             let h = parseInt(dayObj.h) || 0; 
             let m = parseInt(dayObj.m) || 0;
             if (h < 0) h = 0; if (h > 24) h = 24;
@@ -302,22 +290,69 @@ validateManualHours() {
             });
             localStorage.setItem('school_rental_batch_data', JSON.stringify(state));
         },
+        
+        validateBatchHours(day) {
+            if (day.h === '' || isNaN(day.h)) return;
+            if (day.h < 0) day.h = 0;
+            if (day.h > 24) day.h = 24;
+            this.saveBatchState();
+        },
+        validateBatchMinutes(day) {
+            if (day.m === '' || isNaN(day.m)) return;
+            if (day.m < 0) day.m = 0;
+            if (day.m > 59) day.m = 59;
+            this.saveBatchState();
+        },
+        validateManualHours() {
+            if (this.manualH === '' || isNaN(this.manualH)) return;
+            if (this.manualH < 0) this.manualH = 0;
+            if (this.manualH > 24) this.manualH = 24;
+        },
+        validateManualMinutes() {
+            if (this.manualM === '' || isNaN(this.manualM)) return;
+            if (this.manualM < 0) this.manualM = 0;
+            if (this.manualM > 59) this.manualM = 59;
+        },
+
         applyBatchAssignment() {
-            if (!this.contractStart || !this.contractEnd) { this.showToast("⚠️ Najpierw ustaw daty trwania umowy w Konfiguracji!", true); this.activeTab = 'config'; return; }
+            if (!this.contractStart || !this.contractEnd) { 
+                this.showToast("⚠️ Najpierw ustaw daty trwania umowy w Konfiguracji!", true); 
+                this.activeTab = 'config'; 
+                return; 
+            }
             let activeMask = {};
             this.batchDays.forEach(d => { if (d.checked) activeMask[d.id] = this.getBatchDecimal(d); });
-            if (Object.keys(activeMask).length === 0) { this.showToast("⚠️ Zaznacz przynajmniej jeden dzień do przypisania.", true); return; }
+            if (Object.keys(activeMask).length === 0) { 
+                this.showToast("⚠️ Zaznacz przynajmniej jeden dzień do przypisania.", true); 
+                return; 
+            }
             
-            let curr = new Date(this.contractStart); let end = new Date(this.contractEnd); let addedCount = 0;
-            while (curr <= end) {
-                let dStr = curr.toISOString().split('T')[0];
-                let mdStr = dStr.substring(5, 10);
+            // Poprawka dla czasu UTC/Lokalnego - wymusza bezpieczny odczyt początku umowy
+            let curr = new Date(this.contractStart + 'T00:00:00'); 
+            let addedCount = 0;
+            
+            // Pętla while(true) z bezpiecznym przerwaniem (break) po przekroczeniu daty końcowej
+            while (true) {
+                let y = curr.getFullYear();
+                let m = String(curr.getMonth() + 1).padStart(2, '0');
+                let d = String(curr.getDate()).padStart(2, '0');
+                let dStr = `${y}-${m}-${d}`;
+                
+                // Bezbłędne sprawdzanie stringów: ostatni dzień się załapie!
+                if (dStr > this.contractEnd) break; 
+
+                let mdStr = `${m}-${d}`;
                 let dayOfW = curr.getDay();
+                
                 if (!this.customHolidays[dStr] && !this.fixedHolidays[mdStr] && activeMask[dayOfW] !== undefined) {
-                    if (activeMask[dayOfW] > 0) { this.assignedData[dStr] = activeMask[dayOfW]; addedCount++; }
-                    else delete this.assignedData[dStr];
+                    if (activeMask[dayOfW] > 0) { 
+                        this.assignedData[dStr] = activeMask[dayOfW]; 
+                        addedCount++; 
+                    } else {
+                        delete this.assignedData[dStr];
+                    }
                 }
-                curr.setDate(curr.getDate() + 1);
+                curr.setDate(curr.getDate() + 1); // Zawsze +1 dzień
             }
             this.saveCalendarData();
             this.activeTab = 'calc';
@@ -422,7 +457,7 @@ validateManualHours() {
         let customC = localStorage.getItem('school_rental_custom_cennik');
         if (customC) {
             try {
-                let c = JSON.parse(customC); // Poprawiona literówka przy wczytywaniu cennika
+                let c = JSON.parse(customC); 
                 this.bsn2Data = c.bsn2Data || defData.bsn2Data || []; this.districtsW0 = c.districtsW0 || defData.districtsW0 || {};
                 this.fixedHolidays = c.fixedHolidays || defData.fixedHolidays || {}; this.wFactors = c.wFactors || defData.wFactors || {};
             } catch(e) {}
