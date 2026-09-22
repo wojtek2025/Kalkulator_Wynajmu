@@ -13,6 +13,9 @@ const app = createApp({
             contractEnd: '',
             rateNetto: 0,
             vatRate: 23,
+            calcMode: 'netto', // <--- DODANA LINIJKA
+
+
 
             assignedData: {}, 
             selectedDays: [], 
@@ -230,11 +233,23 @@ const app = createApp({
             let h = Math.floor(num); let m = Math.round((num - h) * 60);
             return `${h}h ${m < 10 ? '0' : ''}${m}m`;
         },
-        calculateFinancials(totalHoursDecimal) {
-            let n = Math.round(((Math.round((this.rateNetto || 0) * 100) * totalHoursDecimal) / 100) * 100) / 100;
-            let v = Math.round(n * (this.vatRate / 100) * 100) / 100;
-            return { netto: n, vat: v, brutto: n + v };
+       calculateFinancials(totalHoursDecimal) {
+            if (this.calcMode === 'brutto') {
+                // Liczenie od Brutto
+                let b = Math.round((this.rateBrutto || 0) * totalHoursDecimal * 100) / 100;
+                let n = Math.round((b / (1 + (this.vatRate / 100))) * 100) / 100;
+                let v = Math.round((b - n) * 100) / 100;
+                return { netto: n, vat: v, brutto: b };
+            } else {
+                // Liczenie od Netto (domyślne)
+                let n = Math.round((this.rateNetto || 0) * totalHoursDecimal * 100) / 100;
+                let v = Math.round(n * (this.vatRate / 100) * 100) / 100;
+                return { netto: n, vat: v, brutto: n + v };
+            }
         },
+
+
+
 
         changeMonth(dir) {
             this.currentMonth += dir;
@@ -361,7 +376,7 @@ const app = createApp({
 
         saveConfiguration() {
             if (this.contractStart && this.contractEnd && this.contractStart > this.contractEnd) { this.showToast("⚠️ Data początkowa nie może być późniejsza!", true); return; }
-            let cfg = { start: this.contractStart, end: this.contractEnd, rateNetto: this.rateNetto, vat: this.vatRate };
+            let cfg = { start: this.contractStart, end: this.contractEnd, rateNetto: this.rateNetto, vat: this.vatRate, calcMode: this.calcMode };
             localStorage.setItem('school_rental_config', JSON.stringify(cfg));
             this.showToast("✅ Zapisano pomyślnie Konfigurację Umowy!");
             this.activeTab = 'calc';
@@ -425,6 +440,7 @@ const app = createApp({
                 this.contractStart = cfg.start || ''; this.contractEnd = cfg.end || '';
                 this.vatRate = cfg.vat || 23; this.rateNetto = cfg.rateNetto || 0;
                 this.calcContractStart = this.contractStart; this.calcContractEnd = this.contractEnd;
+                this.calcMode = cfg.calcMode || 'netto';
             } catch(e) {}
         }
 

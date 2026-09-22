@@ -291,6 +291,30 @@
 
                             <div style="background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%); border: 1px solid #bbe1fa; border-radius: 8px; padding: 18px; box-shadow: 0 2px 8px rgba(0,123,255,0.06);">
                                 <h4 style="margin: 0 0 15px 0; color: var(--primary); font-size: 15px;">💰 Stawki godzinowe</h4>
+
+<div class="config-group" style="align-items: center; text-align: center; margin-bottom: 25px; margin-top: 10px;">
+    <label style="margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Sposób wyliczania:</label>
+    
+    <div style="display: inline-flex; background: #e9ecef; border-radius: 30px; padding: 4px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+        <label style="margin: 0; cursor: pointer; position: relative;">
+            <input type="radio" v-model="calcMode" value="netto" style="display: none;">
+            <div :style="calcMode === 'netto' ? 'background: #ffffff; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1);' : 'background: transparent; color: #6c757d;'" 
+                 style="padding: 10px 24px; border-radius: 26px; font-weight: 800; font-size: 14px; transition: all 0.3s ease; text-align: center; min-width: 140px;">
+                Od stawki Netto
+            </div>
+        </label>
+        
+        <label style="margin: 0; cursor: pointer; position: relative;">
+            <input type="radio" v-model="calcMode" value="brutto" style="display: none;">
+            <div :style="calcMode === 'brutto' ? 'background: #ffffff; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1);' : 'background: transparent; color: #6c757d;'" 
+                 style="padding: 10px 24px; border-radius: 26px; font-weight: 800; font-size: 14px; transition: all 0.3s ease; text-align: center; min-width: 140px;">
+                Od stawki Brutto
+            </div>
+        </label>
+    </div>
+</div>
+
+
                                 <div class="config-group">
                                     <label>Stawka VAT:</label>
                                     <select v-model.number="vatRate" style="background: #fff; font-weight: bold;">
